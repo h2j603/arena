@@ -34,7 +34,8 @@ function App() {
       const ch = await getUserChannels(user.slug);
       setChannels(ch);
     } catch (e) {
-      setError('Failed to load. Check your token.');
+      const msg = e instanceof Error ? e.message : 'Unknown error';
+      setError(`Failed to load: ${msg}`);
       setAuthenticated(false);
     } finally {
       setLoading(false);
