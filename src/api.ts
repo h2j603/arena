@@ -2,8 +2,7 @@ import type { ArenaChannel, ArenaBlock } from './types';
 
 const BASE_URL = 'https://api.are.na/v2';
 
-const DEFAULT_TOKEN = 'sQnJaooxwf8jE8N37NkhMfBH_V00hl_U-tBZBtPAPSU';
-let accessToken = localStorage.getItem('arena_token') || DEFAULT_TOKEN;
+let accessToken = localStorage.getItem('arena_token') || '';
 
 export function setToken(token: string) {
   accessToken = token;
@@ -33,7 +32,8 @@ async function apiFetch<T>(path: string): Promise<T> {
   }
   const res = await fetch(`${BASE_URL}${path}`, { headers });
   if (!res.ok) {
-    throw new Error(`API ${res.status}: ${res.statusText}`);
+    const body = await res.text().catch(() => '');
+    throw new Error(`API ${res.status}: ${body || res.statusText}`);
   }
   return res.json();
 }
