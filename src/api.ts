@@ -1,5 +1,7 @@
 import type { ArenaChannel, ArenaBlock } from './types';
 
+const BASE_URL = 'https://api.are.na/v3';
+
 let accessToken = localStorage.getItem('arena_token') || '';
 
 export function setToken(token: string) {
@@ -14,35 +16,28 @@ export function getToken(): string {
 export function clearToken() {
   accessToken = '';
   localStorage.removeItem('arena_token');
+  localStorage.removeItem('arena_slug');
 }
 
-interface UserResponse {
-  id: number;
-  slug: string;
-  username: string;
-  avatar_image: { display: string };
+export function setSlug(slug: string) {
+  localStorage.setItem('arena_slug', slug);
 }
 
-async function apiFetch<T>(basePath: string, path: string): Promise<T> {
+export function getSlug(): string {
+  return localStorage.getItem('arena_slug') || '';
+}
+
+async function apiFetch<T>(path: string): Promise<T> {
   const headers: Record<string, string> = {};
   if (accessToken) {
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
-  const res = await fetch(`https://api.are.na/${basePath}${path}`, { headers });
+  const res = await fetch(`${BASE_URL}${path}`, { headers });
   if (!res.ok) {
     const body = await res.text().catch(() => '');
     throw new Error(`API ${res.status}: ${body || res.statusText}`);
   }
   return res.json();
-}
-
-export async function getUser(): Promise<UserResponse> {
-  // Try v3 first, then fall back to v2
-  try {
-    return await apiFetch<UserResponse>('v3', '/me');
-  } catch {
-    return await apiFetch<UserResponse>('v2', '/me');
-  }
 }
 
 export async function getUserChannels(slug: string): Promise<ArenaChannel[]> {
@@ -51,7 +46,6 @@ export async function getUserChannels(slug: string): Promise<ArenaChannel[]> {
   const perPage = 100;
   while (true) {
     const data = await apiFetch<{ channels: ArenaChannel[] }>(
-      'v2',
       `/users/${slug}/channels?page=${page}&per=${perPage}&sort=updated_at&direction=desc`
     );
     channels.push(...data.channels);
@@ -68,7 +62,6 @@ export async function getChannelContents(slug: string): Promise<{ channel: Arena
   const perPage = 100;
   while (true) {
     const data = await apiFetch<ArenaChannel>(
-      'v2',
       `/channels/${slug}?page=${page}&per=${perPage}`
     );
     if (!channel) channel = data;

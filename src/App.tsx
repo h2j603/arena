@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { setToken, getToken, getUser, getUserChannels, getChannelContents } from './api';
+import { setToken, getToken, setSlug, getSlug, getUserChannels, getChannelContents } from './api';
 import type { ArenaChannel, ArenaBlock, ViewMode } from './types';
 import { Sidebar } from './components/Sidebar';
 import { BlockGrid } from './components/BlockGrid';
@@ -13,8 +13,8 @@ interface ChannelData {
 }
 
 function App() {
-  const [authenticated, setAuthenticated] = useState(!!getToken());
-  const [username, setUsername] = useState('');
+  const [authenticated, setAuthenticated] = useState(!!getToken() && !!getSlug());
+  const [username, setUsername] = useState(getSlug());
   const [channels, setChannels] = useState<ArenaChannel[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
   const [channelData, setChannelData] = useState<Map<string, ChannelData>>(new Map());
@@ -25,13 +25,11 @@ function App() {
   const [blockTypeFilter, setBlockTypeFilter] = useState<string>('all');
   const [error, setError] = useState<string | null>(null);
 
-  const loadUser = useCallback(async () => {
+  const loadChannels = useCallback(async (slug: string) => {
     try {
       setLoading(true);
       setError(null);
-      const user = await getUser();
-      setUsername(user.username);
-      const ch = await getUserChannels(user.slug);
+      const ch = await getUserChannels(slug);
       setChannels(ch);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Unknown error';
@@ -43,13 +41,15 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (authenticated) {
-      loadUser();
+    if (authenticated && username) {
+      loadChannels(username);
     }
-  }, [authenticated, loadUser]);
+  }, [authenticated, username, loadChannels]);
 
-  const handleLogin = (token: string) => {
+  const handleLogin = (token: string, slug: string) => {
     setToken(token);
+    setSlug(slug);
+    setUsername(slug);
     setAuthenticated(true);
   };
 

@@ -1,16 +1,17 @@
 import { useState } from 'react';
 
 interface Props {
-  onLogin: (token: string) => void;
+  onLogin: (token: string, slug: string) => void;
   error: string | null;
 }
 
 export function LoginScreen({ onLogin, error }: Props) {
   const [token, setToken] = useState('');
+  const [slug, setSlug] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (token.trim()) onLogin(token.trim());
+    if (token.trim() && slug.trim()) onLogin(token.trim(), slug.trim());
   };
 
   return (
@@ -24,12 +25,19 @@ export function LoginScreen({ onLogin, error }: Props) {
           <input
             type="text"
             className="login-input"
+            placeholder="Are.na username (e.g. john-doe)"
+            value={slug}
+            onChange={(e) => setSlug(e.target.value)}
+            autoFocus
+          />
+          <input
+            type="text"
+            className="login-input"
             placeholder="Are.na Access Token"
             value={token}
             onChange={(e) => setToken(e.target.value)}
-            autoFocus
           />
-          <button type="submit" className="login-button">
+          <button type="submit" className="login-button" disabled={!token.trim() || !slug.trim()}>
             Connect
           </button>
         </form>
@@ -95,6 +103,10 @@ export function LoginScreen({ onLogin, error }: Props) {
         }
         .login-button:hover {
           opacity: 0.85;
+        }
+        .login-button:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
         }
         .login-error {
           color: #e55;
