@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { setToken, getToken, setSlug, getSlug, getUserChannels, getChannelContents } from './api';
+import { getSlug, getUserChannels, getChannelContents } from './api';
 import type { ArenaChannel, ArenaBlock, ViewMode } from './types';
 import { Sidebar } from './components/Sidebar';
 import { BlockGrid } from './components/BlockGrid';
 import { Header } from './components/Header';
-import { LoginScreen } from './components/LoginScreen';
 import './App.css';
 
 interface ChannelData {
@@ -13,17 +12,7 @@ interface ChannelData {
 }
 
 function App() {
-  const [authenticated, setAuthenticated] = useState(() => {
-    const hasToken = !!getToken();
-    const hasSlug = !!getSlug();
-    if (hasToken && hasSlug) {
-      setToken(getToken());
-      setSlug(getSlug());
-      return true;
-    }
-    return false;
-  });
-  const [username, setUsername] = useState(() => getSlug());
+  const username = getSlug();
   const [channels, setChannels] = useState<ArenaChannel[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
   const [channelData, setChannelData] = useState<Map<string, ChannelData>>(new Map());
@@ -43,24 +32,16 @@ function App() {
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Unknown error';
       setError(`Failed to load: ${msg}`);
-      setAuthenticated(false);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (authenticated && username) {
+    if (username) {
       loadChannels(username);
     }
-  }, [authenticated, username, loadChannels]);
-
-  const handleLogin = (token: string, slug: string) => {
-    setToken(token);
-    setSlug(slug);
-    setUsername(slug);
-    setAuthenticated(true);
-  };
+  }, [username, loadChannels]);
 
   const loadChannel = useCallback(async (slug: string) => {
     if (channelData.has(slug)) return;
@@ -123,8 +104,12 @@ function App() {
     }
   }, [channels, channelData.size]);
 
-  if (!authenticated) {
-    return <LoginScreen onLogin={handleLogin} error={error} />;
+  if (error) {
+    return (
+      <div className="loading-screen">
+        <p className="login-error">{error}</p>
+      </div>
+    );
   }
 
   if (loading) {
