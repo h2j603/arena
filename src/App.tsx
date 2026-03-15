@@ -13,8 +13,17 @@ interface ChannelData {
 }
 
 function App() {
-  const [authenticated, setAuthenticated] = useState(!!getToken() && !!getSlug());
-  const [username, setUsername] = useState(getSlug());
+  const [authenticated, setAuthenticated] = useState(() => {
+    const hasToken = !!getToken();
+    const hasSlug = !!getSlug();
+    if (hasToken && hasSlug) {
+      setToken(getToken());
+      setSlug(getSlug());
+      return true;
+    }
+    return false;
+  });
+  const [username, setUsername] = useState(() => getSlug());
   const [channels, setChannels] = useState<ArenaChannel[]>([]);
   const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
   const [channelData, setChannelData] = useState<Map<string, ChannelData>>(new Map());
