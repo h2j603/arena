@@ -38,6 +38,7 @@ function App() {
   }, []);
 
   useEffect(() => {
+    console.log('[arena] slug:', username, 'token:', !!getSlug());
     if (username) {
       loadChannels(username);
     }

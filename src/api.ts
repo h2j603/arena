@@ -1,11 +1,11 @@
 import type { ArenaChannel, ArenaBlock } from './types';
 
-const BASE_URL = 'https://api.are.na/v3';
+const BASE_URL = 'https://api.are.na/v2';
 
 const ENV_TOKEN = import.meta.env.VITE_ARENA_TOKEN || '';
 const ENV_SLUG = import.meta.env.VITE_ARENA_SLUG || '';
 
-let accessToken = localStorage.getItem('arena_token') || ENV_TOKEN;
+let accessToken = ENV_TOKEN || localStorage.getItem('arena_token') || '';
 
 export function setToken(token: string) {
   accessToken = token;
@@ -27,17 +27,20 @@ export function setSlug(slug: string) {
 }
 
 export function getSlug(): string {
-  return localStorage.getItem('arena_slug') || ENV_SLUG;
+  return ENV_SLUG || localStorage.getItem('arena_slug') || '';
 }
 
 async function apiFetch<T>(path: string): Promise<T> {
+  const url = `${BASE_URL}${path}`;
   const headers: Record<string, string> = {};
   if (accessToken) {
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
-  const res = await fetch(`${BASE_URL}${path}`, { headers });
+  console.log('[arena] fetch', url);
+  const res = await fetch(url, { headers });
   if (!res.ok) {
     const body = await res.text().catch(() => '');
+    console.error('[arena] error', res.status, body);
     throw new Error(`API ${res.status}: ${body || res.statusText}`);
   }
   return res.json();
