@@ -243,6 +243,14 @@ export function BlockDetail({ block, channelTitle, onClose, categories }: Props)
             max-height: 95vh;
             border-radius: var(--radius-lg) var(--radius-lg) 0 0;
           }
+          .detail-close {
+            top: 10px;
+            right: 10px;
+            padding: 8px;
+            background: rgba(0,0,0,0.55);
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+          }
           .detail-meta {
             padding: 16px;
           }
