@@ -23,7 +23,6 @@ export function BlockGrid({ blocks, viewMode, loading, categoryAssignments }: Pr
   if (blocks.length === 0) {
     return (
       <div className="grid-empty">
-        <p className="grid-empty-icon">&#10022;</p>
         <p>No references found</p>
         <p className="grid-empty-sub">Select a channel from the sidebar to explore</p>
       </div>
@@ -81,9 +80,7 @@ function BlockCard({
           {block.image ? (
             <img src={block.image.thumb.url} alt="" />
           ) : (
-            <div className={`block-type-icon ${block.class.toLowerCase()}`}>
-              {block.class[0]}
-            </div>
+            <div className="block-type-icon">{block.class[0]}</div>
           )}
         </div>
         <div className="block-list-info">
@@ -131,36 +128,29 @@ function BlockCard({
           </div>
         )}
       </div>
-      {/* Always-visible channel label */}
-      <div className="block-card-label">
-        <span className="block-card-label-channel">{channelTitle}</span>
-      </div>
-      {/* Hover overlay with more details */}
-      <div className="block-card-overlay">
-        <div className="block-card-overlay-content">
-          <span className="block-card-overlay-title">
-            {block.title || block.source?.title || 'Untitled'}
-          </span>
-          <span className="block-card-overlay-channel">{channelTitle}</span>
-          {categories && categories.length > 0 && (
-            <div className="block-card-overlay-cats">
-              {categories.map(c => (
-                <span key={c} className="block-card-overlay-cat">{c}</span>
-              ))}
-            </div>
-          )}
-        </div>
+      <div className="block-card-meta">
+        <span className="block-card-channel">{channelTitle}</span>
+        {block.title && (
+          <span className="block-card-title">{block.title}</span>
+        )}
+        {categories && categories.length > 0 && (
+          <div className="block-card-cats">
+            {categories.map(c => (
+              <span key={c} className="block-card-cat">{c}</span>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 const gridStyles = `
+  /* Masonry layout using CSS columns */
   .block-grid.grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 4px;
-    padding: 4px;
+    columns: 260px;
+    column-gap: 16px;
+    padding: 16px 20px;
   }
   .block-grid.list {
     display: flex;
@@ -178,44 +168,42 @@ const gridStyles = `
     font-size: 13px;
     gap: 8px;
   }
-  .grid-empty-icon {
-    font-size: 24px;
-    color: var(--accent);
-    opacity: 0.4;
-  }
   .grid-empty-sub {
     font-size: 12px;
   }
 
-  /* Grid card */
+  /* Grid card - masonry item */
   .block-card {
-    position: relative;
-    aspect-ratio: 1;
-    overflow: hidden;
+    break-inside: avoid;
+    margin-bottom: 16px;
+    display: inline-block;
+    width: 100%;
     cursor: pointer;
     background: var(--bg-card);
     border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: box-shadow 0.2s, transform 0.2s;
+  }
+  .block-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-1px);
   }
   .block-card-visual {
+    position: relative;
     width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    overflow: hidden;
   }
   .block-card-visual img {
     width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: opacity 0.4s ease, transform 0.6s ease;
-  }
-  .block-card:hover .block-card-visual img {
-    transform: scale(1.04);
+    height: auto;
+    display: block;
+    transition: opacity 0.4s ease;
   }
   .block-card-placeholder {
-    position: absolute;
-    inset: 0;
-    background: var(--bg-card);
+    width: 100%;
+    padding-bottom: 75%;
+    background: var(--tag-bg);
     animation: pulse 2s ease-in-out infinite;
   }
   @keyframes pulse {
@@ -224,102 +212,73 @@ const gridStyles = `
   }
 
   .block-card-text {
-    padding: 20px;
-    font-size: 11px;
+    padding: 16px;
+    font-size: 12px;
     line-height: 1.7;
     color: var(--text-secondary);
-    overflow: hidden;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
+    min-height: 80px;
   }
   .block-card-link {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 8px;
     color: var(--text-muted);
     font-size: 11px;
-    padding: 20px;
+    padding: 24px 16px;
     text-align: center;
     word-break: break-all;
     line-height: 1.5;
+    min-height: 80px;
   }
   .block-card-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: var(--text-muted);
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 1px;
+    padding: 24px;
+    min-height: 80px;
   }
 
-  /* Always-visible channel label */
-  .block-card-label {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 28px 12px 8px;
-    background: linear-gradient(transparent, rgba(0,0,0,0.65));
-    pointer-events: none;
-    transition: opacity 0.25s;
-  }
-  .block-card-label-channel {
-    font-size: 10px;
-    color: rgba(255,255,255,0.6);
-    letter-spacing: 0.3px;
-  }
-
-  /* Hover overlay */
-  .block-card-overlay {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(transparent 20%, rgba(0,0,0,0.8));
-    opacity: 0;
-    transition: opacity 0.3s;
-    display: flex;
-    align-items: flex-end;
-    padding: 16px;
-  }
-  .block-card:hover .block-card-overlay {
-    opacity: 1;
-  }
-  .block-card:hover .block-card-label {
-    opacity: 0;
-  }
-  .block-card-overlay-content {
+  /* Card meta - always visible below visual */
+  .block-card-meta {
+    padding: 10px 12px;
     display: flex;
     flex-direction: column;
     gap: 3px;
+    border-top: 1px solid var(--border);
   }
-  .block-card-overlay-title {
-    color: #fff;
+  .block-card-channel {
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
+  .block-card-title {
     font-size: 12px;
-    font-weight: 500;
+    color: var(--text);
     line-height: 1.4;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  .block-card-overlay-channel {
-    color: rgba(255,255,255,0.5);
-    font-size: 10px;
-    letter-spacing: 0.3px;
-  }
-  .block-card-overlay-cats {
+  .block-card-cats {
     display: flex;
     gap: 4px;
     flex-wrap: wrap;
-    margin-top: 4px;
+    margin-top: 2px;
   }
-  .block-card-overlay-cat {
+  .block-card-cat {
     font-size: 9px;
     padding: 2px 6px;
     border-radius: 10px;
-    background: rgba(196, 165, 90, 0.25);
-    color: rgba(255, 230, 150, 0.85);
+    background: var(--ai-accent-soft);
+    color: var(--ai-accent);
     letter-spacing: 0.2px;
   }
 
@@ -328,10 +287,10 @@ const gridStyles = `
     display: flex;
     align-items: center;
     gap: 14px;
-    padding: 10px 28px;
+    padding: 10px 24px;
     border-bottom: 1px solid var(--border);
     cursor: pointer;
-    transition: background 0.2s;
+    transition: background 0.15s;
   }
   .block-list-item:hover {
     background: var(--tag-bg);
@@ -342,7 +301,7 @@ const gridStyles = `
     border-radius: var(--radius);
     overflow: hidden;
     flex-shrink: 0;
-    background: var(--bg-card);
+    background: var(--tag-bg);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -379,8 +338,8 @@ const gridStyles = `
     font-size: 10px;
     padding: 2px 8px;
     border-radius: 10px;
-    background: var(--accent-soft);
-    color: var(--accent);
+    background: var(--ai-accent-soft);
+    color: var(--ai-accent);
     flex-shrink: 0;
   }
   .block-list-type {
@@ -391,14 +350,32 @@ const gridStyles = `
     flex-shrink: 0;
   }
 
+  /* Mobile */
   @media (max-width: 768px) {
     .block-grid.grid {
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      gap: 3px;
-      padding: 3px;
+      columns: 2;
+      column-gap: 8px;
+      padding: 8px;
+    }
+    .block-card {
+      margin-bottom: 8px;
+    }
+    .block-card-meta {
+      padding: 8px 10px;
     }
     .block-list-item {
-      padding: 8px 16px;
+      padding: 8px 12px;
+      gap: 10px;
+    }
+    .block-list-thumb {
+      width: 36px;
+      height: 36px;
+    }
+  }
+  @media (max-width: 480px) {
+    .block-grid.grid {
+      columns: 1;
+      padding: 8px;
     }
   }
 `;

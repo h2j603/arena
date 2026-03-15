@@ -40,6 +40,7 @@ function App() {
   const [categoryResult, setCategoryResult] = useState<CategoryResult | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isCategorizing, setIsCategorizing] = useState(false);
+  const [categorizeError, setCategorizeError] = useState<string | null>(null);
 
   const loadChannels = useCallback(async (slug: string) => {
     try {
@@ -141,6 +142,7 @@ function App() {
 
   const handleCategorize = async () => {
     setIsCategorizing(true);
+    setCategorizeError(null);
     try {
       const allBlocks: { id: number; title: string | null; type: string; description: string | null; channelTitle: string }[] = [];
       channelData.forEach((data) => {
@@ -157,7 +159,9 @@ function App() {
       const result = await categorizeBlocks(allBlocks);
       setCategoryResult(result);
     } catch (e) {
-      console.error('Categorization failed:', e);
+      const msg = e instanceof Error ? e.message : 'Unknown error';
+      console.error('Categorization failed:', msg);
+      setCategorizeError(msg);
     } finally {
       setIsCategorizing(false);
     }
@@ -216,6 +220,7 @@ function App() {
           onCategorize={handleCategorize}
           onClearCategories={handleClearCategories}
           isCategorizing={isCategorizing}
+          categorizeError={categorizeError}
           hasBlocks={channelData.size > 0}
         />
         <BlockGrid

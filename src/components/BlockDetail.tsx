@@ -109,22 +109,20 @@ export function BlockDetail({ block, channelTitle, onClose, categories }: Props)
           position: fixed;
           inset: 0;
           z-index: 200;
-          background: rgba(0,0,0,0.7);
-          backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
+          background: rgba(0,0,0,0.6);
+          backdrop-filter: blur(4px);
           display: flex;
           align-items: center;
           justify-content: center;
           padding: 40px;
-          animation: fadeIn 0.25s ease;
+          animation: fadeIn 0.2s;
         }
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
         }
         .detail-modal {
-          background: var(--bg-surface);
-          border: 1px solid var(--border);
+          background: var(--bg-card);
           border-radius: var(--radius-lg);
           max-width: 800px;
           max-height: 85vh;
@@ -133,19 +131,18 @@ export function BlockDetail({ block, channelTitle, onClose, categories }: Props)
           display: flex;
           flex-direction: column;
           position: relative;
-          box-shadow: var(--shadow-lg);
+          box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
         .detail-close {
           position: absolute;
-          top: 14px;
-          right: 14px;
+          top: 12px;
+          right: 12px;
           z-index: 10;
-          padding: 8px;
+          padding: 6px;
           border-radius: 50%;
-          color: var(--text-muted);
-          background: rgba(0,0,0,0.4);
-          backdrop-filter: blur(4px);
-          transition: color 0.2s;
+          color: var(--text-secondary);
+          background: var(--bg-card);
+          transition: color 0.15s;
         }
         .detail-close:hover {
           color: var(--text);
@@ -154,44 +151,41 @@ export function BlockDetail({ block, channelTitle, onClose, categories }: Props)
           overflow-y: auto;
         }
         .detail-image {
-          background: var(--bg);
+          background: var(--tag-bg);
           display: flex;
           justify-content: center;
-          padding: 0;
         }
         .detail-image img {
           max-width: 100%;
-          max-height: 60vh;
+          max-height: 55vh;
           object-fit: contain;
         }
         .detail-text-content {
-          padding: 28px;
+          padding: 24px;
           font-size: 14px;
-          line-height: 1.8;
+          line-height: 1.7;
           color: var(--text);
           max-height: 50vh;
           overflow-y: auto;
         }
         .detail-meta {
-          padding: 24px 28px 28px;
+          padding: 20px 24px 24px;
         }
         .detail-title {
-          font-family: var(--font-serif);
-          font-size: 20px;
-          font-weight: 400;
-          letter-spacing: 0.2px;
-          margin-bottom: 16px;
-          color: var(--text);
+          font-size: 16px;
+          font-weight: 600;
+          letter-spacing: -0.3px;
+          margin-bottom: 14px;
         }
         .detail-info {
           display: flex;
           flex-direction: column;
-          gap: 8px;
-          margin-bottom: 16px;
+          gap: 6px;
+          margin-bottom: 14px;
         }
         .detail-info-row {
           display: flex;
-          gap: 14px;
+          gap: 12px;
           font-size: 12px;
         }
         .detail-label {
@@ -200,44 +194,38 @@ export function BlockDetail({ block, channelTitle, onClose, categories }: Props)
           flex-shrink: 0;
         }
         .detail-link {
-          color: var(--accent);
+          color: var(--text-secondary);
           text-decoration: underline;
-          text-underline-offset: 3px;
-          text-decoration-color: rgba(196, 165, 90, 0.3);
-        }
-        .detail-link:hover {
-          text-decoration-color: var(--accent);
+          text-underline-offset: 2px;
         }
         .detail-categories {
           display: flex;
           gap: 6px;
           flex-wrap: wrap;
-          margin-bottom: 16px;
+          margin-bottom: 14px;
         }
         .detail-cat-tag {
           font-size: 11px;
           padding: 3px 10px;
           border-radius: 12px;
-          background: var(--accent-soft);
-          color: var(--accent);
-          letter-spacing: 0.2px;
+          background: var(--ai-accent-soft);
+          color: var(--ai-accent);
         }
         .detail-desc {
-          font-size: 13px;
+          font-size: 12px;
           color: var(--text-secondary);
-          line-height: 1.7;
-          margin-bottom: 18px;
+          line-height: 1.6;
+          margin-bottom: 16px;
         }
         .detail-open-btn {
           display: inline-block;
-          padding: 8px 18px;
+          padding: 7px 16px;
           background: var(--accent);
           color: var(--bg);
           border-radius: var(--radius);
           font-size: 12px;
           font-weight: 500;
           transition: opacity 0.2s;
-          letter-spacing: 0.3px;
         }
         .detail-open-btn:hover {
           opacity: 0.85;
@@ -245,13 +233,15 @@ export function BlockDetail({ block, channelTitle, onClose, categories }: Props)
 
         @media (max-width: 768px) {
           .detail-backdrop {
-            padding: 16px;
+            padding: 0;
+            align-items: flex-end;
           }
           .detail-modal {
-            max-height: 90vh;
+            max-height: 95vh;
+            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
           }
           .detail-meta {
-            padding: 20px;
+            padding: 16px;
           }
         }
       `}</style>

@@ -1,27 +1,44 @@
 :root {
-  --bg: #0c0e09;
-  --bg-surface: #131610;
-  --bg-card: #1a1d16;
-  --bg-card-hover: #22261e;
-  --text: #ddd6c8;
-  --text-secondary: #958e80;
-  --text-muted: #5c5850;
-  --border: #262920;
-  --accent: #c4a55a;
-  --accent-soft: rgba(196, 165, 90, 0.1);
-  --accent-green: #7a9a68;
-  --accent-green-soft: rgba(122, 154, 104, 0.1);
-  --sidebar-bg: #111410;
-  --sidebar-width: 260px;
-  --tag-bg: rgba(255,255,255,0.05);
-  --tag-active: #c4a55a;
-  --tag-active-text: #0c0e09;
-  --shadow: 0 2px 16px rgba(0,0,0,0.4);
-  --shadow-lg: 0 8px 40px rgba(0,0,0,0.5);
-  --radius: 6px;
-  --radius-lg: 10px;
+  --bg: #f5f5f5;
+  --bg-card: #fff;
+  --text: #1a1a1a;
+  --text-secondary: #777;
+  --text-muted: #aaa;
+  --border: #e0e0e0;
+  --accent: #1a1a1a;
+  --sidebar-bg: #fff;
+  --sidebar-width: 240px;
+  --tag-bg: #f0f0f0;
+  --tag-active: #1a1a1a;
+  --tag-active-text: #fff;
+  --shadow: 0 1px 4px rgba(0,0,0,0.06);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,0.12);
+  --radius: 4px;
+  --radius-lg: 8px;
+  --ai-accent: #6b5ce7;
+  --ai-accent-soft: rgba(107, 92, 231, 0.08);
   --font-serif: 'Cormorant Garamond', 'Georgia', serif;
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e0e0e;
+    --bg-card: #1a1a1a;
+    --text: #e0e0e0;
+    --text-secondary: #888;
+    --text-muted: #555;
+    --border: #262626;
+    --accent: #fff;
+    --sidebar-bg: #141414;
+    --tag-bg: #222;
+    --tag-active: #fff;
+    --tag-active-text: #000;
+    --shadow: 0 1px 4px rgba(0,0,0,0.3);
+    --shadow-lg: 0 8px 30px rgba(0,0,0,0.4);
+    --ai-accent: #8b7cf7;
+    --ai-accent-soft: rgba(139, 124, 247, 0.12);
+  }
 }
 
 * {
@@ -50,17 +67,14 @@ body {
 }
 
 ::-webkit-scrollbar {
-  width: 4px;
+  width: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
   background: var(--border);
-  border-radius: 2px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
+  border-radius: 3px;
 }
 
 a {

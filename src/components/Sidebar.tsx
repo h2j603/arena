@@ -15,6 +15,7 @@ interface Props {
 export function Sidebar({ channels, selectedChannel, onSelectChannel, username, loadedChannels, hiddenChannels, onToggleHidden }: Props) {
   const [search, setSearch] = useState('');
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const filtered = channels.filter((ch) =>
     ch.title.toLowerCase().includes(search.toLowerCase())
@@ -22,23 +23,33 @@ export function Sidebar({ channels, selectedChannel, onSelectChannel, username, 
 
   if (collapsed) {
     return (
-      <aside className="sidebar sidebar-collapsed">
-        <button className="sidebar-toggle" onClick={() => setCollapsed(false)} title="Expand">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <>
+        <aside className="sidebar sidebar-collapsed">
+          <button className="sidebar-toggle" onClick={() => setCollapsed(false)} title="Expand">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        </aside>
+        {/* Mobile hamburger */}
+        <button className="mobile-menu-btn" onClick={() => setMobileOpen(true)}>
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <line x1="3" y1="6" x2="17" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="3" y1="10" x2="17" y2="10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="3" y1="14" x2="17" y2="14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
         </button>
         <style>{sidebarStyles}</style>
-      </aside>
+      </>
     );
   }
 
-  return (
-    <aside className="sidebar">
+  const sidebarContent = (
+    <>
       <div className="sidebar-header">
         <div className="sidebar-title-row">
-          <h1 className="sidebar-title">Inspirations</h1>
-          <button className="sidebar-toggle" onClick={() => setCollapsed(true)} title="Collapse">
+          <h1 className="sidebar-title">Are.na Archive</h1>
+          <button className="sidebar-toggle" onClick={() => { setCollapsed(true); setMobileOpen(false); }} title="Collapse">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M10 4l-4 4 4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
@@ -59,7 +70,7 @@ export function Sidebar({ channels, selectedChannel, onSelectChannel, username, 
       <nav className="sidebar-nav">
         <button
           className={`sidebar-item ${selectedChannel === null ? 'active' : ''}`}
-          onClick={() => onSelectChannel(null)}
+          onClick={() => { onSelectChannel(null); setMobileOpen(false); }}
         >
           <span className="sidebar-item-title">All Channels</span>
           <span className="sidebar-item-count">{channels.length}</span>
@@ -70,11 +81,11 @@ export function Sidebar({ channels, selectedChannel, onSelectChannel, username, 
         {filtered.map((ch) => (
           <div key={ch.id} className="sidebar-item-row">
             <button
-              className={`sidebar-item ${selectedChannel === ch.slug ? 'active' : ''}`}
-              onClick={() => onSelectChannel(ch.slug)}
+              className={`sidebar-item ${selectedChannel === ch.slug ? 'active' : ''} ${hiddenChannels.has(ch.slug) ? 'dimmed' : ''}`}
+              onClick={() => { onSelectChannel(ch.slug); setMobileOpen(false); }}
             >
               <span className="sidebar-item-title">
-                {loadedChannels.has(ch.slug) && <span className="sidebar-item-dot">&#9679;</span>}
+                {loadedChannels.has(ch.slug) && <span className="sidebar-item-dot" />}
                 {ch.title}
               </span>
               <span className="sidebar-item-count">{ch.length}</span>
@@ -104,33 +115,71 @@ export function Sidebar({ channels, selectedChannel, onSelectChannel, username, 
           Disconnect
         </button>
       </div>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <aside className="sidebar sidebar-desktop">
+        {sidebarContent}
+      </aside>
+
+      {/* Mobile hamburger */}
+      <button className="mobile-menu-btn" onClick={() => setMobileOpen(true)}>
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <line x1="3" y1="6" x2="17" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          <line x1="3" y1="10" x2="17" y2="10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          <line x1="3" y1="14" x2="17" y2="14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+      </button>
+
+      {/* Mobile overlay sidebar */}
+      {mobileOpen && (
+        <div className="mobile-sidebar-backdrop" onClick={() => setMobileOpen(false)}>
+          <aside className="sidebar sidebar-mobile" onClick={(e) => e.stopPropagation()}>
+            {sidebarContent}
+          </aside>
+        </div>
+      )}
 
       <style>{sidebarStyles}</style>
-    </aside>
+    </>
   );
 }
 
 const sidebarStyles = `
   .sidebar {
-    position: fixed;
-    top: 0;
-    left: 0;
     width: var(--sidebar-width);
     height: 100vh;
     background: var(--sidebar-bg);
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
-    z-index: 100;
     overflow: hidden;
   }
+  .sidebar-desktop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 100;
+  }
   .sidebar-collapsed {
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 40px;
-    align-items: center;
+    height: 100vh;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
     padding-top: 14px;
+    justify-content: center;
+    z-index: 100;
   }
   .sidebar-header {
-    padding: 28px 20px 0;
+    padding: 24px 16px 0;
   }
   .sidebar-title-row {
     display: flex;
@@ -138,12 +187,9 @@ const sidebarStyles = `
     justify-content: space-between;
   }
   .sidebar-title {
-    font-family: var(--font-serif);
-    font-size: 22px;
-    font-weight: 400;
-    font-style: italic;
-    color: var(--accent);
-    letter-spacing: 0.3px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
   }
   .sidebar-toggle {
     padding: 4px;
@@ -151,7 +197,7 @@ const sidebarStyles = `
     color: var(--text-muted);
     display: flex;
     align-items: center;
-    transition: color 0.2s;
+    transition: color 0.15s;
   }
   .sidebar-toggle:hover {
     color: var(--text);
@@ -159,18 +205,17 @@ const sidebarStyles = `
   .sidebar-user {
     font-size: 11px;
     color: var(--text-muted);
-    margin-top: 4px;
-    letter-spacing: 0.3px;
+    margin-top: 2px;
   }
   .sidebar-search {
-    padding: 18px 20px 10px;
+    padding: 14px 16px 8px;
   }
   .sidebar-search input {
     width: 100%;
-    padding: 8px 12px;
+    padding: 6px 10px;
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    background: var(--bg);
+    background: transparent;
     color: var(--text);
     font-size: 12px;
     font-family: inherit;
@@ -178,7 +223,7 @@ const sidebarStyles = `
     transition: border-color 0.2s;
   }
   .sidebar-search input:focus {
-    border-color: var(--accent);
+    border-color: var(--text-muted);
   }
   .sidebar-search input::placeholder {
     color: var(--text-muted);
@@ -186,31 +231,33 @@ const sidebarStyles = `
   .sidebar-nav {
     flex: 1;
     overflow-y: auto;
-    padding: 4px 10px;
+    padding: 4px 8px;
   }
   .sidebar-item-row {
     display: flex;
     align-items: center;
-    gap: 0;
   }
   .sidebar-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    padding: 7px 10px;
+    padding: 6px 8px;
     border-radius: var(--radius);
     font-size: 12px;
     text-align: left;
-    transition: all 0.15s;
+    transition: all 0.12s;
     gap: 8px;
   }
   .sidebar-item:hover {
     background: var(--tag-bg);
   }
   .sidebar-item.active {
-    background: var(--accent-soft);
-    color: var(--accent);
+    background: var(--tag-active);
+    color: var(--tag-active-text);
+  }
+  .sidebar-item.dimmed {
+    opacity: 0.45;
   }
   .sidebar-item-title {
     overflow: hidden;
@@ -222,14 +269,20 @@ const sidebarStyles = `
     gap: 6px;
   }
   .sidebar-item-dot {
-    font-size: 6px;
-    color: var(--accent-green);
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--ai-accent);
     flex-shrink: 0;
   }
   .sidebar-item-count {
     color: var(--text-muted);
     font-size: 10px;
     flex-shrink: 0;
+  }
+  .sidebar-item.active .sidebar-item-count {
+    color: var(--tag-active-text);
+    opacity: 0.5;
   }
   .sidebar-eye {
     padding: 4px;
@@ -239,14 +292,13 @@ const sidebarStyles = `
     align-items: center;
     flex-shrink: 0;
     opacity: 0;
-    transition: opacity 0.15s, color 0.15s;
+    transition: opacity 0.12s, color 0.12s;
   }
   .sidebar-item-row:hover .sidebar-eye {
     opacity: 1;
   }
   .sidebar-eye.hidden-ch {
     opacity: 0.6;
-    color: var(--text-muted);
   }
   .sidebar-eye:hover {
     color: var(--text-secondary);
@@ -254,25 +306,64 @@ const sidebarStyles = `
   .sidebar-divider {
     height: 1px;
     background: var(--border);
-    margin: 6px 10px;
+    margin: 4px 8px;
   }
   .sidebar-footer {
-    padding: 14px 20px;
+    padding: 12px 16px;
     border-top: 1px solid var(--border);
   }
   .sidebar-logout {
     font-size: 11px;
     color: var(--text-muted);
-    transition: color 0.2s;
-    letter-spacing: 0.3px;
+    transition: color 0.15s;
   }
   .sidebar-logout:hover {
-    color: var(--accent);
+    color: var(--text);
+  }
+
+  /* Mobile */
+  .mobile-menu-btn {
+    display: none;
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 90;
+    padding: 8px;
+    border-radius: var(--radius);
+    background: var(--bg-card);
+    box-shadow: var(--shadow);
+    color: var(--text);
+  }
+  .mobile-sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 150;
+    background: rgba(0,0,0,0.4);
+  }
+  .sidebar-mobile {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 200;
+    box-shadow: var(--shadow-lg);
   }
 
   @media (max-width: 768px) {
-    .sidebar {
+    .sidebar-desktop {
       display: none;
+    }
+    .sidebar-collapsed {
+      display: none;
+    }
+    .mobile-menu-btn {
+      display: flex;
+    }
+    .mobile-sidebar-backdrop {
+      display: block;
+    }
+    .sidebar-mobile {
+      display: flex;
     }
   }
 `;

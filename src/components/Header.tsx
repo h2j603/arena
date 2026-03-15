@@ -15,6 +15,7 @@ interface Props {
   onCategorize: () => void;
   onClearCategories: () => void;
   isCategorizing: boolean;
+  categorizeError: string | null;
   hasBlocks: boolean;
 }
 
@@ -42,6 +43,7 @@ export function Header({
   onCategorize,
   onClearCategories,
   isCategorizing,
+  categorizeError,
   hasBlocks,
 }: Props) {
   return (
@@ -54,7 +56,7 @@ export function Header({
           <span className="header-count">{totalBlocks}</span>
         </div>
 
-        <div className="header-right">
+        <div className="header-center">
           <div className="header-filters">
             {BLOCK_TYPES.map((t) => (
               <button
@@ -66,7 +68,9 @@ export function Header({
               </button>
             ))}
           </div>
+        </div>
 
+        <div className="header-right">
           <input
             type="text"
             className="header-search"
@@ -74,7 +78,6 @@ export function Header({
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
           />
-
           <div className="view-toggle">
             <button
               className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`}
@@ -103,112 +106,116 @@ export function Header({
         </div>
       </div>
 
-      {/* AI Category Row */}
-      <div className="header-categories">
-        {!categories && hasBlocks && (
-          <button
-            className="categorize-btn"
-            onClick={onCategorize}
-            disabled={isCategorizing}
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M7 1l1.5 3.5L12 6l-3.5 1.5L7 11l-1.5-3.5L2 6l3.5-1.5L7 1z" stroke="currentColor" strokeWidth="1" fill="currentColor" fillOpacity="0.15"/>
-              <path d="M11 1l.5 1.5L13 3l-1.5.5L11 5l-.5-1.5L9 3l1.5-.5L11 1z" stroke="currentColor" strokeWidth="0.8" fill="currentColor" fillOpacity="0.15"/>
-            </svg>
-            {isCategorizing ? 'Analyzing...' : 'Categorize with AI'}
-          </button>
-        )}
-
-        {categories && (
-          <>
-            <button
-              className={`category-tag ${selectedCategory === null ? 'active' : ''}`}
-              onClick={() => onSelectCategory(null)}
-            >
-              All
-            </button>
-            {categories.map((cat) => (
+      {/* AI Categories */}
+      {(hasBlocks || categories) && (
+        <div className="header-categories">
+          {!categories && (
+            <>
               <button
-                key={cat}
-                className={`category-tag ${selectedCategory === cat ? 'active' : ''}`}
-                onClick={() => onSelectCategory(selectedCategory === cat ? null : cat)}
+                className="categorize-btn"
+                onClick={onCategorize}
+                disabled={isCategorizing}
               >
-                {cat}
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M7 1l1.5 3.5L12 6l-3.5 1.5L7 11l-1.5-3.5L2 6l3.5-1.5L7 1z" stroke="currentColor" strokeWidth="1" fill="currentColor" fillOpacity="0.15"/>
+                </svg>
+                {isCategorizing ? 'Analyzing references...' : 'Categorize with AI'}
               </button>
-            ))}
-            <button className="clear-categories" onClick={onClearCategories} title="Clear categories">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-              </svg>
-            </button>
-          </>
-        )}
-      </div>
+              {categorizeError && (
+                <span className="categorize-error">Failed: {categorizeError.slice(0, 80)}</span>
+              )}
+            </>
+          )}
+
+          {categories && (
+            <>
+              <button
+                className={`category-tag ${selectedCategory === null ? 'active' : ''}`}
+                onClick={() => onSelectCategory(null)}
+              >
+                All
+              </button>
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  className={`category-tag ${selectedCategory === cat ? 'active' : ''}`}
+                  onClick={() => onSelectCategory(selectedCategory === cat ? null : cat)}
+                >
+                  {cat}
+                </button>
+              ))}
+              <button className="clear-categories" onClick={onClearCategories} title="Clear categories">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                </svg>
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       <style>{`
         .header {
           position: sticky;
           top: 0;
           z-index: 50;
-          background: rgba(12, 14, 9, 0.85);
+          background: var(--bg);
           border-bottom: 1px solid var(--border);
-          padding: 0;
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
+          backdrop-filter: blur(8px);
         }
         .header-top {
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 16px;
-          padding: 14px 28px;
+          padding: 12px 24px;
         }
         .header-left {
           display: flex;
           align-items: baseline;
-          gap: 10px;
+          gap: 8px;
           flex-shrink: 0;
         }
         .header-title {
-          font-family: var(--font-serif);
-          font-size: 18px;
-          font-weight: 400;
-          color: var(--text);
-          letter-spacing: 0.2px;
+          font-size: 14px;
+          font-weight: 600;
+          letter-spacing: -0.3px;
         }
         .header-count {
           font-size: 11px;
           color: var(--text-muted);
-          font-variant-numeric: tabular-nums;
         }
-        .header-right {
+        .header-center {
+          flex: 1;
           display: flex;
-          align-items: center;
-          gap: 12px;
-          flex-shrink: 0;
+          justify-content: center;
         }
         .header-filters {
           display: flex;
-          gap: 2px;
+          gap: 4px;
         }
         .filter-tag {
           padding: 4px 10px;
           border-radius: 20px;
           font-size: 11px;
-          color: var(--text-muted);
-          transition: all 0.2s;
-          letter-spacing: 0.2px;
+          color: var(--text-secondary);
+          transition: all 0.15s;
         }
         .filter-tag:hover {
-          color: var(--text-secondary);
           background: var(--tag-bg);
         }
         .filter-tag.active {
           background: var(--tag-active);
           color: var(--tag-active-text);
         }
+        .header-right {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-shrink: 0;
+        }
         .header-search {
-          padding: 6px 12px;
+          padding: 6px 10px;
           border: 1px solid var(--border);
           border-radius: var(--radius);
           background: transparent;
@@ -216,14 +223,14 @@ export function Header({
           font-size: 12px;
           font-family: inherit;
           outline: none;
-          width: 150px;
-          transition: border-color 0.2s, width 0.3s;
+          width: 160px;
+          transition: border-color 0.2s, width 0.2s;
         }
         .header-search::placeholder {
           color: var(--text-muted);
         }
         .header-search:focus {
-          border-color: var(--accent);
+          border-color: var(--text-muted);
           width: 200px;
         }
         .view-toggle {
@@ -237,72 +244,68 @@ export function Header({
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 5px 7px;
-          border-radius: 4px;
+          padding: 4px 6px;
+          border-radius: 3px;
           color: var(--text-muted);
-          transition: all 0.2s;
+          transition: all 0.15s;
         }
         .view-btn.active {
           background: var(--bg-card);
-          color: var(--accent);
+          color: var(--text);
           box-shadow: var(--shadow);
         }
 
-        /* Category row */
+        /* AI Categories row */
         .header-categories {
           display: flex;
           align-items: center;
           gap: 6px;
-          padding: 0 28px 12px;
+          padding: 0 24px 10px;
           overflow-x: auto;
           scrollbar-width: none;
+          -webkit-overflow-scrolling: touch;
         }
         .header-categories::-webkit-scrollbar {
-          display: none;
-        }
-        .header-categories:empty {
           display: none;
         }
         .categorize-btn {
           display: flex;
           align-items: center;
           gap: 6px;
-          padding: 6px 14px;
+          padding: 5px 14px;
           border-radius: 20px;
           font-size: 11px;
-          color: var(--accent);
-          border: 1px solid var(--accent);
-          background: var(--accent-soft);
+          color: var(--ai-accent);
+          border: 1px solid var(--ai-accent);
+          background: var(--ai-accent-soft);
           transition: all 0.2s;
           white-space: nowrap;
-          letter-spacing: 0.2px;
         }
         .categorize-btn:hover:not(:disabled) {
-          background: rgba(196, 165, 90, 0.2);
+          background: rgba(107, 92, 231, 0.15);
         }
         .categorize-btn:disabled {
           opacity: 0.6;
           cursor: wait;
         }
         .category-tag {
-          padding: 5px 12px;
+          padding: 4px 12px;
           border-radius: 20px;
           font-size: 11px;
           color: var(--text-secondary);
           background: var(--tag-bg);
-          transition: all 0.2s;
+          transition: all 0.15s;
           white-space: nowrap;
           border: 1px solid transparent;
-          letter-spacing: 0.2px;
         }
         .category-tag:hover {
           color: var(--text);
-          background: rgba(255,255,255,0.08);
+          background: var(--border);
         }
         .category-tag.active {
-          background: var(--accent-soft);
-          color: var(--accent);
-          border-color: var(--accent);
+          background: var(--ai-accent-soft);
+          color: var(--ai-accent);
+          border-color: var(--ai-accent);
         }
         .clear-categories {
           padding: 4px;
@@ -316,22 +319,36 @@ export function Header({
         .clear-categories:hover {
           color: var(--text);
         }
+        .categorize-error {
+          font-size: 11px;
+          color: #c45a5a;
+          white-space: nowrap;
+        }
 
         @media (max-width: 768px) {
           .header-top {
-            padding: 10px 16px;
+            padding: 10px 12px;
             flex-wrap: wrap;
+            gap: 8px;
           }
-          .header-filters {
+          .header-center {
             order: 3;
             width: 100%;
+            justify-content: flex-start;
             overflow-x: auto;
           }
+          .header-filters {
+            flex-wrap: nowrap;
+          }
           .header-search {
-            width: 120px;
+            width: 100px;
+            flex: 1;
+          }
+          .header-search:focus {
+            width: 100px;
           }
           .header-categories {
-            padding: 0 16px 10px;
+            padding: 0 12px 8px;
           }
         }
       `}</style>
