@@ -177,7 +177,7 @@ function App() {
             type: b.class,
             description: b.description,
             channelTitle: data.channel.title,
-            imageUrl: b.image?.display?.url || null,
+            imageUrl: b.image?.thumb?.url || null,
           });
         });
       });

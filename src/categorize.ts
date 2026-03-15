@@ -42,27 +42,39 @@ export async function categorizeBlocks(
     if (cached) return cached;
   }
 
-  const subset = blocks.slice(0, 80);
+  // Split into image blocks (vision) and text-only blocks
+  const imageBlocks = blocks.filter((b) => b.imageUrl);
+  const textBlocks = blocks.filter((b) => !b.imageUrl);
 
-  // Build multimodal content: images + text labels
+  // Send up to 40 images via vision, rest as text metadata
+  const visionBlocks = imageBlocks.slice(0, 40);
+  const remainingImageBlocks = imageBlocks.slice(40);
+
   const content: Array<Record<string, unknown>> = [];
   const nonImageParts: string[] = [];
 
-  for (const b of subset) {
-    if (b.imageUrl) {
-      content.push({
-        type: 'image',
-        source: { type: 'url', url: b.imageUrl },
-      });
-      content.push({
-        type: 'text',
-        text: `[Block ${b.id}: "${b.title || 'Untitled'}" — ch: "${b.channelTitle}"]`,
-      });
-    } else {
-      const title = b.title || 'Untitled';
-      const desc = b.description ? ` | ${b.description.slice(0, 80)}` : '';
-      nonImageParts.push(`${b.id}: [${b.type}] "${title}" (ch: ${b.channelTitle})${desc}`);
-    }
+  for (const b of visionBlocks) {
+    content.push({
+      type: 'image',
+      source: { type: 'url', url: b.imageUrl },
+    });
+    content.push({
+      type: 'text',
+      text: `[Block ${b.id}: "${b.title || 'Untitled'}" — ch: "${b.channelTitle}"]`,
+    });
+  }
+
+  // Remaining image blocks as text only
+  for (const b of remainingImageBlocks) {
+    const title = b.title || 'Untitled';
+    const desc = b.description ? ` | ${b.description.slice(0, 80)}` : '';
+    nonImageParts.push(`${b.id}: [Image] "${title}" (ch: ${b.channelTitle})${desc}`);
+  }
+
+  for (const b of textBlocks) {
+    const title = b.title || 'Untitled';
+    const desc = b.description ? ` | ${b.description.slice(0, 80)}` : '';
+    nonImageParts.push(`${b.id}: [${b.type}] "${title}" (ch: ${b.channelTitle})${desc}`);
   }
 
   const promptText = `You are a creative art curator with a poetic sensibility. Above are images and references from a personal inspiration archive on Are.na.
@@ -91,7 +103,7 @@ Return ONLY valid JSON (no markdown, no explanation):
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 8192,
       messages: [{ role: 'user', content }],
     }),
