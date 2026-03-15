@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import type { ArenaBlock, ViewMode } from '../types';
 import { BlockDetail } from './BlockDetail';
 
@@ -58,7 +58,7 @@ export function BlockGrid({ blocks, viewMode, loading, categoryAssignments }: Pr
   );
 }
 
-function BlockCard({
+const BlockCard = memo(function BlockCard({
   block,
   channelTitle,
   viewMode,
@@ -108,7 +108,7 @@ function BlockCard({
               alt={block.title || ''}
               loading="lazy"
               onLoad={() => setImgLoaded(true)}
-              style={{ opacity: imgLoaded ? 1 : 0 }}
+              style={imgLoaded ? undefined : { opacity: 0, position: 'absolute' }}
             />
           </>
         ) : block.class === 'Text' ? (
@@ -143,10 +143,9 @@ function BlockCard({
       </div>
     </div>
   );
-}
+});
 
 const gridStyles = `
-  /* Masonry layout using CSS columns */
   .block-grid.grid {
     columns: 260px;
     column-gap: 16px;
@@ -172,7 +171,6 @@ const gridStyles = `
     font-size: 12px;
   }
 
-  /* Grid card - masonry item */
   .block-card {
     break-inside: avoid;
     margin-bottom: 16px;
@@ -198,7 +196,7 @@ const gridStyles = `
     width: 100%;
     height: auto;
     display: block;
-    transition: opacity 0.4s ease;
+    transition: opacity 0.3s ease;
   }
   .block-card-placeholder {
     width: 100%;
@@ -244,7 +242,6 @@ const gridStyles = `
     min-height: 80px;
   }
 
-  /* Card meta - always visible below visual */
   .block-card-meta {
     padding: 10px 12px;
     display: flex;
@@ -282,7 +279,6 @@ const gridStyles = `
     letter-spacing: 0.2px;
   }
 
-  /* List item */
   .block-list-item {
     display: flex;
     align-items: center;
@@ -350,7 +346,6 @@ const gridStyles = `
     flex-shrink: 0;
   }
 
-  /* Mobile */
   @media (max-width: 768px) {
     .block-grid.grid {
       columns: 2;

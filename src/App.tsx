@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { getSlug, getUserChannels, getChannelContents } from './api';
 import { categorizeBlocks, clearCategoryCache } from './categorize';
 import type { ArenaChannel, ArenaBlock, ViewMode } from './types';
@@ -42,6 +42,13 @@ function App() {
   const [isCategorizing, setIsCategorizing] = useState(false);
   const [categorizeError, setCategorizeError] = useState<string | null>(null);
 
+  // Ref to avoid stale closure in loadChannel
+  const channelDataRef = useRef(channelData);
+  channelDataRef.current = channelData;
+
+  // Track in-flight channel loads to prevent duplicates
+  const loadingChannelsRef = useRef(new Set<string>());
+
   const loadChannels = useCallback(async (slug: string) => {
     try {
       setLoading(true);
@@ -57,30 +64,32 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (username) {
-      loadChannels(username);
-    }
+    if (username) loadChannels(username);
   }, [username, loadChannels]);
 
+  // Stable loadChannel - no dependency on channelData state
   const loadChannel = useCallback(async (slug: string) => {
-    if (channelData.has(slug)) return;
+    if (channelDataRef.current.has(slug)) return;
+    if (loadingChannelsRef.current.has(slug)) return;
+    loadingChannelsRef.current.add(slug);
     try {
       setLoadingBlocks(true);
       const data = await getChannelContents(slug);
       setChannelData((prev) => new Map(prev).set(slug, data));
     } catch {
-      // silently fail for individual channels
+      // silently fail
     } finally {
+      loadingChannelsRef.current.delete(slug);
       setLoadingBlocks(false);
     }
-  }, [channelData]);
+  }, []);
 
-  const handleSelectChannel = (slug: string | null) => {
+  const handleSelectChannel = useCallback((slug: string | null) => {
     setSelectedChannel(slug);
     if (slug) loadChannel(slug);
-  };
+  }, [loadChannel]);
 
-  const handleToggleHidden = (slug: string) => {
+  const handleToggleHidden = useCallback((slug: string) => {
     setHiddenChannels(prev => {
       const next = new Set(prev);
       if (next.has(slug)) {
@@ -91,9 +100,10 @@ function App() {
       saveHiddenChannels(next);
       return next;
     });
-  };
+  }, []);
 
-  const getAllBlocks = (): { block: ArenaBlock; channelTitle: string }[] => {
+  // Memoized block list - avoids recomputation on unrelated state changes
+  const blocks = useMemo(() => {
     const results: { block: ArenaBlock; channelTitle: string }[] = [];
 
     if (selectedChannel) {
@@ -125,27 +135,38 @@ function App() {
         }
         return true;
       })
-      .sort((a, b) => new Date(b.block.connected_at || b.block.created_at).getTime() - new Date(a.block.connected_at || a.block.created_at).getTime());
-  };
+      .sort((a, b) =>
+        new Date(b.block.connected_at || b.block.created_at).getTime() -
+        new Date(a.block.connected_at || a.block.created_at).getTime()
+      );
+  }, [selectedChannel, channelData, hiddenChannels, blockTypeFilter, selectedCategory, categoryResult, searchQuery]);
 
-  // Load first few channels on initial load for "all" view
+  // Batch-load first channels in parallel on initial load
   useEffect(() => {
     if (channels.length > 0 && channelData.size === 0) {
       const toLoad = channels.slice(0, 6);
-      toLoad.forEach((ch) => {
-        getChannelContents(ch.slug).then((data) => {
-          setChannelData((prev) => new Map(prev).set(ch.slug, data));
+      Promise.allSettled(
+        toLoad.map((ch) => getChannelContents(ch.slug))
+      ).then((results) => {
+        setChannelData((prev) => {
+          const next = new Map(prev);
+          results.forEach((r, i) => {
+            if (r.status === 'fulfilled') {
+              next.set(toLoad[i].slug, r.value);
+            }
+          });
+          return next;
         });
       });
     }
   }, [channels, channelData.size]);
 
-  const handleCategorize = async () => {
+  const handleCategorize = useCallback(async () => {
     setIsCategorizing(true);
     setCategorizeError(null);
     try {
       const allBlocks: { id: number; title: string | null; type: string; description: string | null; channelTitle: string }[] = [];
-      channelData.forEach((data) => {
+      channelDataRef.current.forEach((data) => {
         data.blocks.forEach((b) => {
           allBlocks.push({
             id: b.id,
@@ -160,18 +181,24 @@ function App() {
       setCategoryResult(result);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Unknown error';
-      console.error('Categorization failed:', msg);
       setCategorizeError(msg);
     } finally {
       setIsCategorizing(false);
     }
-  };
+  }, []);
 
-  const handleClearCategories = () => {
+  const handleClearCategories = useCallback(() => {
     clearCategoryCache();
     setCategoryResult(null);
     setSelectedCategory(null);
-  };
+  }, []);
+
+  // Memoize loadedChannels set to avoid new object every render
+  const loadedChannels = useMemo(() => new Set(channelData.keys()), [channelData]);
+
+  // Memoize category assignments
+  const categoryAssignments = categoryResult?.assignments || null;
+  const categoryNames = categoryResult?.categories || null;
 
   if (error) {
     return (
@@ -191,8 +218,6 @@ function App() {
     );
   }
 
-  const blocks = getAllBlocks();
-
   return (
     <div className="app-layout">
       <Sidebar
@@ -200,7 +225,7 @@ function App() {
         selectedChannel={selectedChannel}
         onSelectChannel={handleSelectChannel}
         username={username}
-        loadedChannels={new Set(channelData.keys())}
+        loadedChannels={loadedChannels}
         hiddenChannels={hiddenChannels}
         onToggleHidden={handleToggleHidden}
       />
@@ -214,7 +239,7 @@ function App() {
           onBlockTypeFilterChange={setBlockTypeFilter}
           totalBlocks={blocks.length}
           selectedChannelTitle={selectedChannel ? channelData.get(selectedChannel)?.channel.title : undefined}
-          categories={categoryResult?.categories || null}
+          categories={categoryNames}
           selectedCategory={selectedCategory}
           onSelectCategory={setSelectedCategory}
           onCategorize={handleCategorize}
@@ -227,7 +252,7 @@ function App() {
           blocks={blocks}
           viewMode={viewMode}
           loading={loadingBlocks && blocks.length === 0}
-          categoryAssignments={categoryResult?.assignments || null}
+          categoryAssignments={categoryAssignments}
         />
       </main>
     </div>

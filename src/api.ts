@@ -36,11 +36,9 @@ async function apiFetch<T>(path: string): Promise<T> {
   if (accessToken) {
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
-  console.log('[arena] fetch', url);
   const res = await fetch(url, { headers });
   if (!res.ok) {
     const body = await res.text().catch(() => '');
-    console.error('[arena] error', res.status, body);
     throw new Error(`API ${res.status}: ${body || res.statusText}`);
   }
   return res.json();
