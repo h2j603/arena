@@ -145,13 +145,13 @@ const BlockCard = memo(function BlockCard({
 
   // Grid card - visual part differs by type
   const renderVisual = () => {
-    // Links and images with thumbnails
+    // Links and images with thumbnails — use large for speed
     if (block.image) {
       return (
         <>
           {!imgLoaded && <div className="block-card-placeholder" />}
           <img
-            src={block.image.display.url}
+            src={block.image.large.url}
             alt=""
             loading="lazy"
             onLoad={() => setImgLoaded(true)}
@@ -383,6 +383,7 @@ const gridStyles = `
     border-bottom: 1px solid var(--border);
     cursor: pointer;
     transition: background 0.15s;
+    overflow: hidden;
   }
   .block-list-item:hover {
     background: var(--tag-bg);

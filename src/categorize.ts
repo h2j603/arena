@@ -12,8 +12,16 @@ export interface CategoryResult {
 }
 
 const CACHE_KEY = 'arena_categories';
+const API_KEY_STORAGE = 'anthropic_api_key';
 const API_URL = 'https://api.anthropic.com/v1/messages';
-const API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY || '';
+
+export function getApiKey(): string {
+  return localStorage.getItem(API_KEY_STORAGE) || import.meta.env.VITE_ANTHROPIC_API_KEY || '';
+}
+
+export function setApiKey(key: string) {
+  localStorage.setItem(API_KEY_STORAGE, key);
+}
 
 function getCachedCategories(): CategoryResult | null {
   try {
@@ -42,8 +50,9 @@ export async function categorizeBlocks(
     if (cached) return cached;
   }
 
-  if (!API_KEY) {
-    throw new Error('Anthropic API key not configured');
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    throw new Error('NO_API_KEY');
   }
 
   const subset = blocks.slice(0, 200);
@@ -74,7 +83,7 @@ Return ONLY valid JSON (no markdown, no explanation):
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': API_KEY,
+      'x-api-key': apiKey,
       'anthropic-version': '2023-06-01',
       'anthropic-dangerous-direct-browser-access': 'true',
     },
