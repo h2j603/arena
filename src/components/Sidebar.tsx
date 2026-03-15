@@ -48,7 +48,7 @@ export function Sidebar({ channels, selectedChannel, onSelectChannel, username, 
     <>
       <div className="sidebar-header">
         <div className="sidebar-title-row">
-          <h1 className="sidebar-title">Are.na Archive</h1>
+          <h1 className="sidebar-title">Archive</h1>
           <button className="sidebar-toggle" onClick={() => { setCollapsed(true); setMobileOpen(false); }} title="Collapse">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M10 4l-4 4 4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -187,8 +187,9 @@ const sidebarStyles = `
     justify-content: space-between;
   }
   .sidebar-title {
-    font-size: 14px;
-    font-weight: 600;
+    font-family: var(--font-serif);
+    font-size: 18px;
+    font-weight: 400;
     letter-spacing: -0.3px;
   }
   .sidebar-toggle {
@@ -272,7 +273,7 @@ const sidebarStyles = `
     width: 5px;
     height: 5px;
     border-radius: 50%;
-    background: var(--ai-accent);
+    background: var(--text-muted);
     flex-shrink: 0;
   }
   .sidebar-item-count {

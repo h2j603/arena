@@ -175,14 +175,13 @@ export function Header({
           z-index: 50;
           background: var(--bg);
           border-bottom: 1px solid var(--border);
-          backdrop-filter: blur(8px);
         }
         .header-top {
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 16px;
-          padding: 12px 24px;
+          padding: 14px 24px;
         }
         .header-left {
           display: flex;
@@ -191,13 +190,15 @@ export function Header({
           flex-shrink: 0;
         }
         .header-title {
-          font-size: 14px;
-          font-weight: 600;
+          font-family: var(--font-serif);
+          font-size: 20px;
+          font-weight: 400;
           letter-spacing: -0.3px;
         }
         .header-count {
           font-size: 11px;
           color: var(--text-muted);
+          font-weight: 400;
         }
         .header-center {
           flex: 1;
@@ -206,21 +207,24 @@ export function Header({
         }
         .header-filters {
           display: flex;
-          gap: 4px;
+          gap: 2px;
         }
         .filter-tag {
           padding: 4px 10px;
-          border-radius: 20px;
+          border-radius: 2px;
           font-size: 11px;
-          color: var(--text-secondary);
-          transition: all 0.15s;
+          color: var(--text-muted);
+          letter-spacing: 0.3px;
+          text-transform: uppercase;
+          transition: color 0.15s;
         }
         .filter-tag:hover {
-          background: var(--tag-bg);
+          color: var(--text);
         }
         .filter-tag.active {
-          background: var(--tag-active);
-          color: var(--tag-active-text);
+          color: var(--text);
+          font-weight: 500;
+          border-bottom: 1.5px solid var(--text);
         }
         .header-right {
           display: flex;
@@ -229,52 +233,47 @@ export function Header({
           flex-shrink: 0;
         }
         .header-search {
-          padding: 6px 10px;
-          border: 1px solid var(--border);
-          border-radius: var(--radius);
+          padding: 5px 0;
+          border: none;
+          border-bottom: 1px solid var(--border);
+          border-radius: 0;
           background: transparent;
           color: var(--text);
           font-size: 12px;
           font-family: inherit;
           outline: none;
-          width: 160px;
+          width: 140px;
           transition: border-color 0.2s, width 0.2s;
         }
         .header-search::placeholder {
           color: var(--text-muted);
         }
         .header-search:focus {
-          border-color: var(--text-muted);
-          width: 200px;
+          border-color: var(--text);
+          width: 180px;
         }
         .view-toggle {
           display: flex;
-          gap: 2px;
-          background: var(--tag-bg);
-          border-radius: var(--radius);
-          padding: 2px;
+          gap: 4px;
         }
         .view-btn {
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 4px 6px;
-          border-radius: 3px;
+          padding: 4px;
           color: var(--text-muted);
-          transition: all 0.15s;
+          transition: color 0.15s;
         }
         .view-btn.active {
-          background: var(--bg-card);
           color: var(--text);
-          border: 1px solid var(--border);
         }
 
         /* AI Categories row */
         .header-categories {
           display: flex;
           align-items: center;
-          gap: 6px;
-          padding: 0 24px 10px;
+          gap: 8px;
+          padding: 0 24px 12px;
           overflow-x: auto;
           scrollbar-width: none;
           -webkit-overflow-scrolling: touch;
@@ -285,49 +284,48 @@ export function Header({
         .categorize-btn {
           display: flex;
           align-items: center;
-          gap: 6px;
-          padding: 5px 14px;
-          border-radius: 20px;
+          gap: 5px;
+          padding: 0;
           font-size: 11px;
-          color: var(--ai-accent);
-          border: 1px solid var(--ai-accent);
-          background: var(--ai-accent-soft);
-          transition: all 0.2s;
+          color: var(--text-muted);
+          border: none;
+          background: none;
+          transition: color 0.15s;
           white-space: nowrap;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
         }
         .categorize-btn:hover:not(:disabled) {
-          background: rgba(107, 92, 231, 0.15);
+          color: var(--text);
         }
         .categorize-btn:disabled {
-          opacity: 0.6;
+          opacity: 0.5;
           cursor: wait;
         }
         .category-tag {
-          padding: 4px 12px;
-          border-radius: 20px;
-          font-size: 11px;
-          color: var(--text-secondary);
-          background: var(--tag-bg);
-          transition: all 0.15s;
+          padding: 0;
+          font-size: 12px;
+          color: var(--text-muted);
+          background: none;
+          transition: color 0.15s;
           white-space: nowrap;
-          border: 1px solid transparent;
+          border: none;
         }
         .category-tag:hover {
           color: var(--text);
-          background: var(--border);
         }
         .category-tag.active {
-          background: var(--ai-accent-soft);
-          color: var(--ai-accent);
-          border-color: var(--ai-accent);
+          color: var(--text);
+          font-weight: 500;
+          text-decoration: underline;
+          text-underline-offset: 3px;
         }
         .clear-categories {
-          padding: 4px;
-          border-radius: 50%;
+          padding: 2px;
           color: var(--text-muted);
           display: flex;
           align-items: center;
-          transition: color 0.2s;
+          transition: color 0.15s;
           flex-shrink: 0;
         }
         .clear-categories:hover {
@@ -335,14 +333,11 @@ export function Header({
         }
         .categorize-error {
           font-size: 11px;
-          color: #c45a5a;
+          color: #b55;
           white-space: nowrap;
         }
 
         @media (max-width: 768px) {
-          .header {
-            padding-top: 0;
-          }
           .header-top {
             padding: 10px 12px 10px 52px;
             flex-wrap: wrap;
@@ -353,7 +348,7 @@ export function Header({
             order: 1;
           }
           .header-title {
-            font-size: 13px;
+            font-size: 17px;
           }
           .header-center {
             order: 3;
@@ -365,9 +360,6 @@ export function Header({
           }
           .header-center::-webkit-scrollbar {
             display: none;
-          }
-          .header-filters {
-            flex-wrap: nowrap;
           }
           .header-right {
             order: 2;

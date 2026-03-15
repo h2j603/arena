@@ -172,8 +172,9 @@ export function BlockDetail({ block, channelTitle, onClose, categories }: Props)
           padding: 20px 24px 24px;
         }
         .detail-title {
-          font-size: 16px;
-          font-weight: 600;
+          font-family: var(--font-serif);
+          font-size: 20px;
+          font-weight: 400;
           letter-spacing: -0.3px;
           margin-bottom: 14px;
         }
@@ -205,11 +206,9 @@ export function BlockDetail({ block, channelTitle, onClose, categories }: Props)
           margin-bottom: 14px;
         }
         .detail-cat-tag {
-          font-size: 11px;
-          padding: 3px 10px;
-          border-radius: 12px;
-          background: var(--ai-accent-soft);
-          color: var(--ai-accent);
+          font-size: 12px;
+          font-style: italic;
+          color: var(--text-muted);
         }
         .detail-desc {
           font-size: 12px;

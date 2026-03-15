@@ -212,7 +212,7 @@ const gridStyles = `
   .block-grid.grid {
     columns: 260px;
     column-gap: 16px;
-    padding: 16px 20px;
+    padding: 20px 24px;
   }
   .block-grid.list {
     display: flex;
@@ -246,17 +246,11 @@ const gridStyles = `
   /* Grid card */
   .block-card {
     break-inside: avoid;
-    margin-bottom: 16px;
+    margin-bottom: 20px;
     display: inline-block;
     width: 100%;
     cursor: pointer;
-    background: var(--bg-card);
-    border-radius: var(--radius);
     overflow: hidden;
-    transition: transform 0.2s;
-  }
-  .block-card:hover {
-    transform: translateY(-1px);
   }
   .block-card-visual {
     position: relative;
@@ -269,77 +263,68 @@ const gridStyles = `
     display: block;
     transition: opacity 0.3s ease;
   }
-  .block-card-placeholder {
-    width: 100%;
-    padding-bottom: 75%;
-    background: var(--tag-bg);
-    animation: pulse 2s ease-in-out infinite;
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 0.4; }
-    50% { opacity: 0.7; }
-  }
 
   .block-card-text {
-    padding: 16px;
+    padding: 14px 0;
     font-size: 12px;
     line-height: 1.7;
     color: var(--text-secondary);
-    min-height: 80px;
   }
   .block-card-text p {
     display: -webkit-box;
-    -webkit-line-clamp: 10;
+    -webkit-line-clamp: 8;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
   .block-card-link {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
+    gap: 6px;
     color: var(--text-muted);
-    padding: 28px 16px;
-    text-align: center;
-    min-height: 100px;
+    padding: 20px 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .block-card-link svg {
+    display: none;
   }
   .block-card-link-title {
-    font-size: 12px;
-    font-weight: 500;
+    font-family: var(--font-serif);
+    font-size: 15px;
+    font-weight: 400;
     color: var(--text);
-    line-height: 1.4;
+    line-height: 1.3;
     word-break: break-word;
   }
   .block-card-link-host {
     font-size: 10px;
     color: var(--text-muted);
+    letter-spacing: 0.2px;
   }
   .block-card-fallback {
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--text-muted);
-    font-size: 11px;
+    font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 1px;
     padding: 24px;
-    min-height: 80px;
+    min-height: 60px;
+    border: 1px solid var(--border);
   }
 
   /* Card meta */
   .block-card-meta {
-    padding: 10px 12px;
+    padding: 8px 0;
     display: flex;
     flex-direction: column;
-    gap: 3px;
-    border-top: 1px solid var(--border);
+    gap: 2px;
   }
   .block-card-channel {
     font-size: 10px;
     color: var(--text-muted);
-    letter-spacing: 0.3px;
-    text-transform: uppercase;
+    letter-spacing: 0.2px;
     display: flex;
     align-items: center;
     gap: 5px;
@@ -355,17 +340,17 @@ const gridStyles = `
   }
   .block-card-cats {
     display: flex;
-    gap: 4px;
+    gap: 6px;
     flex-wrap: wrap;
     margin-top: 2px;
   }
   .block-card-cat {
-    font-size: 9px;
-    padding: 2px 6px;
-    border-radius: 10px;
-    background: var(--ai-accent-soft);
-    color: var(--ai-accent);
-    letter-spacing: 0.2px;
+    font-size: 10px;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+  .block-card-cat::before {
+    content: '';
   }
 
   /* List item */
@@ -385,7 +370,6 @@ const gridStyles = `
   .block-list-thumb {
     width: 44px;
     height: 44px;
-    border-radius: var(--radius);
     overflow: hidden;
     flex-shrink: 0;
     background: var(--tag-bg);
@@ -403,9 +387,10 @@ const gridStyles = `
     object-fit: cover;
   }
   .block-type-icon {
-    font-size: 14px;
-    font-weight: 600;
+    font-size: 13px;
+    font-weight: 400;
     color: var(--text-muted);
+    font-family: var(--font-serif);
   }
   .block-list-info {
     flex: 1;
@@ -415,8 +400,8 @@ const gridStyles = `
     gap: 2px;
   }
   .block-list-title {
-    font-size: 12px;
-    font-weight: 500;
+    font-size: 13px;
+    font-weight: 400;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -429,11 +414,9 @@ const gridStyles = `
     gap: 4px;
   }
   .block-list-cat {
-    font-size: 10px;
-    padding: 2px 8px;
-    border-radius: 10px;
-    background: var(--ai-accent-soft);
-    color: var(--ai-accent);
+    font-size: 11px;
+    color: var(--text-muted);
+    font-style: italic;
     flex-shrink: 0;
   }
   .block-list-type {
@@ -447,14 +430,14 @@ const gridStyles = `
   @media (max-width: 768px) {
     .block-grid.grid {
       columns: 2;
-      column-gap: 8px;
-      padding: 8px;
+      column-gap: 10px;
+      padding: 10px;
     }
     .block-card {
-      margin-bottom: 8px;
+      margin-bottom: 12px;
     }
     .block-card-meta {
-      padding: 6px 8px;
+      padding: 5px 0;
     }
     .block-card-channel {
       font-size: 9px;
@@ -464,19 +447,17 @@ const gridStyles = `
       -webkit-line-clamp: 1;
     }
     .block-card-text {
-      padding: 10px;
+      padding: 8px 0;
       font-size: 11px;
-      min-height: 60px;
     }
     .block-card-text p {
       -webkit-line-clamp: 5;
     }
     .block-card-link {
-      padding: 16px 10px;
-      min-height: 60px;
+      padding: 12px 0;
     }
     .block-card-link-title {
-      font-size: 11px;
+      font-size: 13px;
     }
     .block-list-item {
       padding: 8px 12px;
