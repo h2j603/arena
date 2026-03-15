@@ -2,10 +2,10 @@ import type { ArenaChannel, ArenaBlock } from './types';
 
 const BASE_URL = 'https://api.are.na/v2';
 
-const ENV_TOKEN = import.meta.env.VITE_ARENA_TOKEN || '';
-const ENV_SLUG = import.meta.env.VITE_ARENA_SLUG || '';
+const DEFAULT_TOKEN = 'R7a3rYZUyvGORi1ZQSk3W7y4s0ISiOABodlx8lUiELY';
+const DEFAULT_SLUG = 'hyuk-jang-cud6vccao20';
 
-let accessToken = ENV_TOKEN || localStorage.getItem('arena_token') || '';
+let accessToken = localStorage.getItem('arena_token') || DEFAULT_TOKEN;
 
 export function setToken(token: string) {
   accessToken = token;
@@ -27,7 +27,7 @@ export function setSlug(slug: string) {
 }
 
 export function getSlug(): string {
-  return ENV_SLUG || localStorage.getItem('arena_slug') || '';
+  return localStorage.getItem('arena_slug') || DEFAULT_SLUG;
 }
 
 async function apiFetch<T>(path: string): Promise<T> {
