@@ -207,10 +207,10 @@ const sidebarStyles = `
   }
   .sidebar-title {
     font-family: var(--font-serif);
-    font-size: 20px;
+    font-size: 26px;
     font-weight: 400;
-    letter-spacing: -0.3px;
-    line-height: 1.2;
+    letter-spacing: -0.5px;
+    line-height: 1;
   }
   .sidebar-user {
     font-size: 11px;

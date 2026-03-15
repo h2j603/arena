@@ -178,37 +178,37 @@ const detailStyles = `
     object-fit: contain;
   }
   .detail-text-body {
-    padding: 32px 36px;
-    font-size: 15px;
+    padding: 36px 40px;
+    font-size: 16px;
     line-height: 1.8;
     color: var(--text);
     max-height: 55vh;
     overflow-y: auto;
     font-family: var(--font-serif);
-    letter-spacing: -0.1px;
   }
   .detail-text-body--short {
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    padding: 48px 40px 40px;
-    min-height: 200px;
+    padding: 56px 48px 48px;
+    min-height: 220px;
     justify-content: center;
     background: var(--accent-soft);
   }
   .detail-text-body--short div {
-    font-size: 22px;
-    line-height: 1.5;
+    font-size: 28px;
+    line-height: 1.35;
     font-weight: 400;
+    letter-spacing: -0.5px;
   }
   .detail-text-mark {
     font-family: var(--font-serif);
-    font-size: 72px;
+    font-size: 80px;
     line-height: 0.5;
     color: var(--text-muted);
-    opacity: 0.2;
-    margin-bottom: 16px;
+    opacity: 0.15;
+    margin-bottom: 20px;
     display: block;
     user-select: none;
   }
@@ -217,11 +217,11 @@ const detailStyles = `
   }
   .detail-heading {
     font-family: var(--font-serif);
-    font-size: 24px;
+    font-size: 30px;
     font-weight: 400;
-    letter-spacing: -0.3px;
-    margin-bottom: 18px;
-    line-height: 1.3;
+    letter-spacing: -0.5px;
+    margin-bottom: 20px;
+    line-height: 1.2;
   }
   .detail-fields {
     display: flex;
@@ -263,10 +263,9 @@ const detailStyles = `
   }
   .detail-tag {
     font-family: var(--font-serif);
-    font-size: 12px;
-    font-style: italic;
+    font-size: 14px;
     color: var(--text-muted);
-    padding: 2px 10px;
+    padding: 3px 12px;
     background: var(--accent-soft);
     border-radius: 20px;
   }
@@ -315,7 +314,7 @@ const detailStyles = `
     }
     .detail-close:hover { color: #fff; }
     .detail-meta { padding: 18px 20px 24px; }
-    .detail-heading { font-size: 20px; }
+    .detail-heading { font-size: 24px; }
     .detail-text-body { padding: 20px; }
   }
 `;

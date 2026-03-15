@@ -134,9 +134,10 @@ const gridStyles = `
   }
   .grid-empty-title {
     font-family: var(--font-serif);
-    font-size: 18px;
+    font-size: 24px;
     color: var(--text-secondary);
     font-weight: 400;
+    letter-spacing: -0.3px;
   }
   .grid-empty-sub { font-size: 12px; }
 
@@ -204,14 +205,14 @@ const gridStyles = `
   }
 
   .b-text--short {
-    padding: 28px 22px 16px;
+    padding: 32px 24px 18px;
   }
   .b-text--short .b-text-content {
     font-family: var(--font-serif);
-    font-size: 22px;
-    line-height: 1.3;
+    font-size: 28px;
+    line-height: 1.2;
     color: var(--text);
-    letter-spacing: -0.3px;
+    letter-spacing: -0.5px;
   }
 
   .b-text--long {
@@ -287,8 +288,8 @@ const gridStyles = `
     }
     .b { margin-bottom: 10px; }
     .b-ch { opacity: 1; font-size: 8px; }
-    .b-text--short { padding: 18px 14px 12px; }
-    .b-text--short .b-text-content { font-size: 17px; }
+    .b-text--short { padding: 22px 16px 14px; }
+    .b-text--short .b-text-content { font-size: 22px; }
     .b-text--long { padding: 14px 14px 10px; max-height: 180px; }
     .b-text--long .b-text-content { font-size: 11px; -webkit-line-clamp: 8; }
     .b-link { padding: 14px 14px 10px; }
