@@ -25,18 +25,17 @@ export function Sidebar({ channels, selectedChannel, onSelectChannel, username, 
     return (
       <>
         <aside className="sidebar sidebar-collapsed">
-          <button className="sidebar-toggle" onClick={() => setCollapsed(false)} title="Expand">
+          <button className="sidebar-expand" onClick={() => setCollapsed(false)} title="Expand">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
         </aside>
-        {/* Mobile hamburger */}
         <button className="mobile-menu-btn" onClick={() => setMobileOpen(true)}>
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <line x1="3" y1="6" x2="17" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            <line x1="3" y1="10" x2="17" y2="10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            <line x1="3" y1="14" x2="17" y2="14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <line x1="3" y1="5.5" x2="15" y2="5.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+            <line x1="3" y1="9" x2="15" y2="9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+            <line x1="3" y1="12.5" x2="15" y2="12.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
           </svg>
         </button>
         <style>{sidebarStyles}</style>
@@ -48,20 +47,27 @@ export function Sidebar({ channels, selectedChannel, onSelectChannel, username, 
     <>
       <div className="sidebar-header">
         <div className="sidebar-title-row">
-          <h1 className="sidebar-title">Archive</h1>
-          <button className="sidebar-toggle" onClick={() => { setCollapsed(true); setMobileOpen(false); }} title="Collapse">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M10 4l-4 4 4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          <div className="sidebar-brand">
+            <h1 className="sidebar-title">Archive</h1>
+            <span className="sidebar-user">@{username}</span>
+          </div>
+          <button className="sidebar-collapse" onClick={() => { setCollapsed(true); setMobileOpen(false); }} title="Collapse">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M9 3l-4 4 4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
         </div>
-        <p className="sidebar-user">@{username}</p>
       </div>
 
-      <div className="sidebar-search">
+      <div className="sidebar-search-wrap">
+        <svg className="sidebar-search-icon" width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <circle cx="5" cy="5" r="3.5" stroke="currentColor" strokeWidth="1.2"/>
+          <path d="M7.5 7.5L10 10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+        </svg>
         <input
           type="text"
-          placeholder="Search channels..."
+          className="sidebar-search"
+          placeholder="Find channel..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -69,40 +75,40 @@ export function Sidebar({ channels, selectedChannel, onSelectChannel, username, 
 
       <nav className="sidebar-nav">
         <button
-          className={`sidebar-item ${selectedChannel === null ? 'active' : ''}`}
+          className={`sidebar-item sidebar-item-all ${selectedChannel === null ? 'active' : ''}`}
           onClick={() => { onSelectChannel(null); setMobileOpen(false); }}
         >
-          <span className="sidebar-item-title">All Channels</span>
-          <span className="sidebar-item-count">{channels.length}</span>
+          <span className="sidebar-item-label">All Channels</span>
+          <span className="sidebar-item-num">{channels.length}</span>
         </button>
 
-        <div className="sidebar-divider" />
+        <div className="sidebar-sep" />
 
         {filtered.map((ch) => (
-          <div key={ch.id} className="sidebar-item-row">
+          <div key={ch.id} className="sidebar-row">
             <button
               className={`sidebar-item ${selectedChannel === ch.slug ? 'active' : ''} ${hiddenChannels.has(ch.slug) ? 'dimmed' : ''}`}
               onClick={() => { onSelectChannel(ch.slug); setMobileOpen(false); }}
             >
-              <span className="sidebar-item-title">
-                {loadedChannels.has(ch.slug) && <span className="sidebar-item-dot" />}
+              <span className="sidebar-item-label">
+                {loadedChannels.has(ch.slug) && <span className="sidebar-dot" />}
                 {ch.title}
               </span>
-              <span className="sidebar-item-count">{ch.length}</span>
+              <span className="sidebar-item-num">{ch.length}</span>
             </button>
             <button
-              className={`sidebar-eye ${hiddenChannels.has(ch.slug) ? 'hidden-ch' : ''}`}
+              className={`sidebar-vis ${hiddenChannels.has(ch.slug) ? 'is-hidden' : ''}`}
               onClick={(e) => { e.stopPropagation(); onToggleHidden(ch.slug); }}
               title={hiddenChannels.has(ch.slug) ? 'Show in All view' : 'Hide from All view'}
             >
               {hiddenChannels.has(ch.slug) ? (
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M2 2l10 10M5.6 5.6a2 2 0 002.8 2.8M1.5 7s2-4 5.5-4c.8 0 1.5.2 2.1.5M12.5 7s-2 4-5.5 4c-.8 0-1.5-.2-2.1-.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                  <path d="M2 2l9 9M5.2 5.2a1.8 1.8 0 002.6 2.6M1.5 6.5s1.8-3.5 5-3.5c.7 0 1.3.15 1.8.4M11.5 6.5s-1.8 3.5-5 3.5c-.7 0-1.3-.15-1.8-.4" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
                 </svg>
               ) : (
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M1.5 7s2-4 5.5-4 5.5 4 5.5 4-2 4-5.5 4S1.5 7 1.5 7z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                  <circle cx="7" cy="7" r="2" stroke="currentColor" strokeWidth="1.2"/>
+                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                  <path d="M1.5 6.5s1.8-3.5 5-3.5 5 3.5 5 3.5-1.8 3.5-5 3.5-5-3.5-5-3.5z" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+                  <circle cx="6.5" cy="6.5" r="1.8" stroke="currentColor" strokeWidth="1.1"/>
                 </svg>
               )}
             </button>
@@ -111,7 +117,7 @@ export function Sidebar({ channels, selectedChannel, onSelectChannel, username, 
       </nav>
 
       <div className="sidebar-footer">
-        <button className="sidebar-logout" onClick={() => { clearToken(); window.location.reload(); }}>
+        <button className="sidebar-disconnect" onClick={() => { clearToken(); window.location.reload(); }}>
           Disconnect
         </button>
       </div>
@@ -120,23 +126,20 @@ export function Sidebar({ channels, selectedChannel, onSelectChannel, username, 
 
   return (
     <>
-      {/* Desktop sidebar */}
       <aside className="sidebar sidebar-desktop">
         {sidebarContent}
       </aside>
 
-      {/* Mobile hamburger */}
       <button className="mobile-menu-btn" onClick={() => setMobileOpen(true)}>
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-          <line x1="3" y1="6" x2="17" y2="6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          <line x1="3" y1="10" x2="17" y2="10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          <line x1="3" y1="14" x2="17" y2="14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <line x1="3" y1="5.5" x2="15" y2="5.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+          <line x1="3" y1="9" x2="15" y2="9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+          <line x1="3" y1="12.5" x2="15" y2="12.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
         </svg>
       </button>
 
-      {/* Mobile overlay sidebar */}
       {mobileOpen && (
-        <div className="mobile-sidebar-backdrop" onClick={() => setMobileOpen(false)}>
+        <div className="mobile-backdrop" onClick={() => setMobileOpen(false)}>
           <aside className="sidebar sidebar-mobile" onClick={(e) => e.stopPropagation()}>
             {sidebarContent}
           </aside>
@@ -174,67 +177,92 @@ const sidebarStyles = `
     border-right: 1px solid var(--border);
     display: flex;
     align-items: flex-start;
-    padding-top: 14px;
     justify-content: center;
+    padding-top: 16px;
     z-index: 100;
   }
-  .sidebar-header {
-    padding: 24px 16px 0;
-  }
-  .sidebar-title-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .sidebar-title {
-    font-family: var(--font-serif);
-    font-size: 22px;
-    font-weight: 300;
-    letter-spacing: -0.3px;
-  }
-  .sidebar-toggle {
+  .sidebar-expand {
     padding: 4px;
-    border-radius: 4px;
     color: var(--text-muted);
     display: flex;
     align-items: center;
-    transition: color 0.15s;
+    border-radius: var(--radius);
+    transition: color var(--transition-fast);
   }
-  .sidebar-toggle:hover {
-    color: var(--text);
+  .sidebar-expand:hover { color: var(--text); }
+
+  /* Header */
+  .sidebar-header {
+    padding: 20px 16px 0;
+  }
+  .sidebar-title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+  .sidebar-brand {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .sidebar-title {
+    font-family: var(--font-serif);
+    font-size: 20px;
+    font-weight: 400;
+    letter-spacing: -0.3px;
+    line-height: 1.2;
   }
   .sidebar-user {
     font-size: 11px;
     color: var(--text-muted);
+  }
+  .sidebar-collapse {
+    padding: 4px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    border-radius: var(--radius);
+    transition: color var(--transition-fast);
     margin-top: 2px;
   }
-  .sidebar-search {
-    padding: 14px 16px 8px;
+  .sidebar-collapse:hover { color: var(--text); }
+
+  /* Search */
+  .sidebar-search-wrap {
+    position: relative;
+    padding: 14px 16px 6px;
   }
-  .sidebar-search input {
+  .sidebar-search-icon {
+    position: absolute;
+    left: 25px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    pointer-events: none;
+    margin-top: 4px;
+  }
+  .sidebar-search {
     width: 100%;
-    padding: 6px 10px;
+    padding: 6px 10px 6px 28px;
     border: 1px solid var(--border);
     border-radius: var(--radius);
     background: transparent;
     color: var(--text);
-    font-size: 12px;
+    font-size: 11px;
     font-family: inherit;
     outline: none;
-    transition: border-color 0.2s;
+    transition: border-color var(--transition);
   }
-  .sidebar-search input:focus {
-    border-color: var(--text-muted);
-  }
-  .sidebar-search input::placeholder {
-    color: var(--text-muted);
-  }
+  .sidebar-search:focus { border-color: var(--text-muted); }
+  .sidebar-search::placeholder { color: var(--text-muted); }
+
+  /* Navigation */
   .sidebar-nav {
     flex: 1;
     overflow-y: auto;
-    padding: 4px 8px;
+    padding: 6px 8px;
   }
-  .sidebar-item-row {
+  .sidebar-row {
     display: flex;
     align-items: center;
   }
@@ -243,24 +271,26 @@ const sidebarStyles = `
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    padding: 6px 8px;
+    padding: 5px 8px;
     border-radius: var(--radius);
     font-size: 12px;
     text-align: left;
-    transition: all 0.12s;
+    transition: all var(--transition-fast);
     gap: 8px;
   }
   .sidebar-item:hover {
-    background: var(--tag-bg);
+    background: var(--accent-soft);
   }
   .sidebar-item.active {
     background: var(--tag-active);
     color: var(--tag-active-text);
   }
-  .sidebar-item.dimmed {
-    opacity: 0.45;
+  .sidebar-item.dimmed { opacity: 0.4; }
+  .sidebar-item-all {
+    font-weight: 500;
+    margin-bottom: 2px;
   }
-  .sidebar-item-title {
+  .sidebar-item-label {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -269,77 +299,73 @@ const sidebarStyles = `
     align-items: center;
     gap: 6px;
   }
-  .sidebar-item-dot {
-    width: 5px;
-    height: 5px;
+  .sidebar-dot {
+    width: 4px;
+    height: 4px;
     border-radius: 50%;
     background: var(--text-muted);
     flex-shrink: 0;
   }
-  .sidebar-item-count {
+  .sidebar-item-num {
     color: var(--text-muted);
     font-size: 10px;
     flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
   }
-  .sidebar-item.active .sidebar-item-count {
+  .sidebar-item.active .sidebar-item-num {
     color: var(--tag-active-text);
     opacity: 0.5;
   }
-  .sidebar-eye {
-    padding: 4px;
-    border-radius: 4px;
+  .sidebar-vis {
+    padding: 3px;
+    border-radius: var(--radius);
     color: var(--text-muted);
     display: flex;
     align-items: center;
     flex-shrink: 0;
     opacity: 0;
-    transition: opacity 0.12s, color 0.12s;
+    transition: opacity var(--transition-fast), color var(--transition-fast);
   }
-  .sidebar-item-row:hover .sidebar-eye {
-    opacity: 1;
-  }
-  .sidebar-eye.hidden-ch {
-    opacity: 0.6;
-  }
-  .sidebar-eye:hover {
-    color: var(--text-secondary);
-  }
-  .sidebar-divider {
+  .sidebar-row:hover .sidebar-vis { opacity: 1; }
+  .sidebar-vis.is-hidden { opacity: 0.5; }
+  .sidebar-vis:hover { color: var(--text-secondary); }
+  .sidebar-sep {
     height: 1px;
     background: var(--border);
     margin: 4px 8px;
   }
+
+  /* Footer */
   .sidebar-footer {
-    padding: 12px 16px;
+    padding: 10px 16px;
     border-top: 1px solid var(--border);
   }
-  .sidebar-logout {
+  .sidebar-disconnect {
     font-size: 11px;
     color: var(--text-muted);
-    transition: color 0.15s;
+    transition: color var(--transition-fast);
   }
-  .sidebar-logout:hover {
-    color: var(--text);
-  }
+  .sidebar-disconnect:hover { color: var(--text); }
 
   /* Mobile */
   .mobile-menu-btn {
     display: none;
     position: fixed;
-    top: 11px;
-    left: 10px;
+    top: 12px;
+    left: 12px;
     z-index: 90;
     padding: 6px;
     border-radius: var(--radius);
     color: var(--text);
     background: transparent;
   }
-  .mobile-sidebar-backdrop {
+  .mobile-backdrop {
     display: none;
     position: fixed;
     inset: 0;
     z-index: 150;
-    background: rgba(0,0,0,0.4);
+    background: rgba(0,0,0,0.35);
+    backdrop-filter: blur(2px);
   }
   .sidebar-mobile {
     position: fixed;
@@ -347,23 +373,14 @@ const sidebarStyles = `
     left: 0;
     z-index: 200;
     border-right: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
   }
 
   @media (max-width: 768px) {
-    .sidebar-desktop {
-      display: none;
-    }
-    .sidebar-collapsed {
-      display: none;
-    }
-    .mobile-menu-btn {
-      display: flex;
-    }
-    .mobile-sidebar-backdrop {
-      display: block;
-    }
-    .sidebar-mobile {
-      display: flex;
-    }
+    .sidebar-desktop { display: none; }
+    .sidebar-collapsed { display: none; }
+    .mobile-menu-btn { display: flex; }
+    .mobile-backdrop { display: block; }
+    .sidebar-mobile { display: flex; }
   }
 `;
