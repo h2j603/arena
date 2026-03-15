@@ -9,40 +9,6 @@ interface Props {
   categories: string[] | null;
 }
 
-function channelColor(name: string): string {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const hue = Math.abs(hash) % 360;
-  return `hsl(${hue}, 55%, 52%)`;
-}
-
-function getDisplayTitle(block: ArenaBlock): string | null {
-  switch (block.class) {
-    case 'Image': return null;
-    case 'Text': return null; // text blocks show content as their visual — no separate title needed
-    case 'Link': return block.source?.title || block.title || null;
-    default: return block.title || null;
-  }
-}
-
-function getTextLength(block: ArenaBlock): 'short' | 'medium' | 'long' {
-  const len = (block.content || '').length;
-  if (len < 100) return 'short';
-  if (len < 280) return 'medium';
-  return 'long';
-}
-
-function channelColorSoft(name: string, alpha: number): string {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const hue = Math.abs(hash) % 360;
-  return `hsla(${hue}, 40%, 50%, ${alpha})`;
-}
-
 export function BlockGrid({ blocks, loading, categoryAssignments, categories }: Props) {
   const [selectedBlock, setSelectedBlock] = useState<{ block: ArenaBlock; channelTitle: string } | null>(null);
 
@@ -75,34 +41,33 @@ export function BlockGrid({ blocks, loading, categoryAssignments, categories }: 
     );
   }
 
-  // Curated sections when categories exist
+  const renderGrid = (items: { block: ArenaBlock; channelTitle: string }[], className = 'block-grid') => (
+    <div className={className}>
+      {items.map((item) => (
+        <BlockCard
+          key={`${item.block.id}-${item.channelTitle}`}
+          block={item.block}
+          channelTitle={item.channelTitle}
+          onClick={() => setSelectedBlock(item)}
+        />
+      ))}
+    </div>
+  );
+
   if (groupedBlocks) {
     return (
       <>
         <div className="curated-sections">
           {[...groupedBlocks.entries()].map(([cat, items]) => (
-            <section
-              key={cat}
-              className="curated-section"
-            >
+            <section key={cat} className="curated-section">
               <div className="curated-section-header">
                 <h2 className="curated-section-title">{cat}</h2>
-                <span className="curated-section-count">{items.length} items</span>
+                <span className="curated-section-count">{items.length}</span>
               </div>
-              <div className="curated-grid">
-                {items.map((item) => (
-                  <BlockCard
-                    key={`${item.block.id}-${cat}`}
-                    block={item.block}
-                    channelTitle={item.channelTitle}
-                    onClick={() => setSelectedBlock(item)}
-                  />
-                ))}
-              </div>
+              {renderGrid(items, 'block-grid')}
             </section>
           ))}
         </div>
-
         {selectedBlock && (
           <BlockDetail
             block={selectedBlock.block}
@@ -116,20 +81,9 @@ export function BlockGrid({ blocks, loading, categoryAssignments, categories }: 
     );
   }
 
-  // Default masonry grid
   return (
     <>
-      <div className="block-grid">
-        {blocks.map((item) => (
-          <BlockCard
-            key={`${item.block.id}-${item.channelTitle}`}
-            block={item.block}
-            channelTitle={item.channelTitle}
-            onClick={() => setSelectedBlock(item)}
-          />
-        ))}
-      </div>
-
+      {renderGrid(blocks)}
       {selectedBlock && (
         <BlockDetail
           block={selectedBlock.block}
@@ -153,92 +107,66 @@ const BlockCard = memo(function BlockCard({
   onClick: () => void;
 }) {
   const [imgLoaded, setImgLoaded] = useState(false);
-  const color = channelColor(channelTitle);
-  const displayTitle = getDisplayTitle(block);
+  const content = block.content || '';
+  const isShortText = block.class === 'Text' && content.length < 140;
 
-  const renderVisual = () => {
-    if (block.image) {
-      return (
+  // Image block — just the image, nothing else
+  if (block.image) {
+    return (
+      <div className="b" onClick={onClick}>
         <img
           src={block.image.display.url}
           alt=""
           loading="lazy"
           onLoad={() => setImgLoaded(true)}
-          style={{ opacity: imgLoaded ? 1 : 0 }}
+          className={`b-img ${imgLoaded ? 'b-img--loaded' : ''}`}
         />
-      );
-    }
-    if (block.class === 'Text') {
-      const textLen = getTextLength(block);
-      const bgTint = channelColorSoft(channelTitle, 0.06);
-      const accentLine = channelColorSoft(channelTitle, 0.25);
-
-      if (textLen === 'short') {
-        return (
-          <div className="card-text card-text--short" style={{ background: bgTint }}>
-            <span className="card-text-quote">"</span>
-            <p>{block.content}</p>
-          </div>
-        );
-      }
-      if (textLen === 'medium') {
-        return (
-          <div className="card-text card-text--medium" style={{ borderLeftColor: accentLine, background: bgTint }}>
-            <p>{block.content?.slice(0, 280)}</p>
-          </div>
-        );
-      }
-      return (
-        <div className="card-text card-text--long" style={{ borderLeftColor: accentLine }}>
-          <p>{block.content?.slice(0, 400)}</p>
-          <div className="card-text-fade" />
-        </div>
-      );
-    }
-    if (block.class === 'Link') {
-      return (
-        <div className="card-link" style={{ borderLeftColor: color }}>
-          <span className="card-link-title">{block.source?.title || block.title || 'Link'}</span>
-          {block.source?.url && (() => {
-            try { return <span className="card-link-domain">{new URL(block.source!.url).hostname}</span>; }
-            catch { return null; }
-          })()}
-        </div>
-      );
-    }
-    return <div className="card-fallback"><span>{block.class}</span></div>;
-  };
-
-  const isImage = block.class === 'Image' && block.image;
-
-  return (
-    <div className="block-card" onClick={onClick}>
-      <div className="card-visual">
-        {renderVisual()}
-        {isImage && (
-          <div className="card-overlay">
-            <span className="card-channel-overlay">{channelTitle}</span>
-          </div>
-        )}
+        <span className="b-ch">{channelTitle}</span>
       </div>
-      {!isImage && (
-        <div className="card-info">
-          <span className="card-channel" style={{ color }}>
-            {channelTitle}
-          </span>
-          {displayTitle && <span className="card-title">{displayTitle}</span>}
-        </div>
-      )}
+    );
+  }
+
+  // Text block
+  if (block.class === 'Text') {
+    return (
+      <div className={`b b-text ${isShortText ? 'b-text--short' : 'b-text--long'}`} onClick={onClick}>
+        <p className="b-text-content">{content.slice(0, isShortText ? 140 : 360)}</p>
+        {!isShortText && <div className="b-text-fade" />}
+        <span className="b-ch b-ch--inside">{channelTitle}</span>
+      </div>
+    );
+  }
+
+  // Link block
+  if (block.class === 'Link') {
+    const domain = (() => {
+      try { return block.source?.url ? new URL(block.source.url).hostname.replace('www.', '') : null; }
+      catch { return null; }
+    })();
+    return (
+      <div className="b b-link" onClick={onClick}>
+        <span className="b-link-title">{block.source?.title || block.title || 'Untitled'}</span>
+        {domain && <span className="b-link-domain">{domain}</span>}
+        <span className="b-ch b-ch--inside">{channelTitle}</span>
+      </div>
+    );
+  }
+
+  // Fallback (Media, Attachment, etc.)
+  return (
+    <div className="b b-fallback" onClick={onClick}>
+      <span className="b-fallback-type">{block.class}</span>
+      {block.title && <span className="b-fallback-title">{block.title}</span>}
+      <span className="b-ch b-ch--inside">{channelTitle}</span>
     </div>
   );
 });
 
 const gridStyles = `
-  /* Masonry grid */
   .block-grid {
-    columns: 280px;
-    column-gap: 18px;
-    padding: 22px 28px 60px;
+    columns: 300px;
+    column-gap: 16px;
+    padding: 20px 28px 80px;
   }
 
   .grid-loading, .grid-empty {
@@ -259,211 +187,161 @@ const gridStyles = `
   }
   .grid-empty-sub { font-size: 12px; }
 
-  /* Card */
-  .block-card {
+  /* --- Block (base) --- */
+  .b {
     break-inside: avoid;
-    margin-bottom: 18px;
+    margin-bottom: 16px;
     display: inline-block;
     width: 100%;
     cursor: pointer;
-    overflow: hidden;
-    border-radius: var(--radius-md);
-    background: var(--bg-card);
-    border: 1px solid var(--border-light);
-    transition: border-color var(--transition), box-shadow var(--transition);
-  }
-  .block-card:hover {
-    border-color: var(--border);
-    box-shadow: var(--shadow-md);
+    position: relative;
   }
 
-  .card-visual {
-    position: relative;
-    width: 100%;
-    overflow: hidden;
-  }
-  .card-visual img {
+  /* --- Image --- */
+  .b-img {
     width: 100%;
     height: auto;
     display: block;
-    transition: opacity var(--transition-slow);
+    border-radius: 3px;
+    opacity: 0;
+    transition: opacity 0.4s ease;
     background: var(--border-light);
-    min-height: 60px;
+    min-height: 40px;
   }
-  /* Text blocks — typographic treatment */
-  .card-text {
+  .b-img--loaded { opacity: 1; }
+
+  /* Channel label — appears on hover over image */
+  .b-ch {
+    position: absolute;
+    bottom: 6px;
+    left: 8px;
+    font-size: 9px;
+    letter-spacing: 0.3px;
+    color: rgba(255,255,255,0.85);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    pointer-events: none;
+    max-width: calc(100% - 16px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .b:hover .b-ch { opacity: 1; }
+
+  /* Channel label inside text/link blocks — always visible, muted */
+  .b-ch--inside {
     position: relative;
+    bottom: auto;
+    left: auto;
+    display: block;
+    color: var(--text-muted);
+    opacity: 0.5;
+    text-shadow: none;
+    margin-top: 10px;
+    font-size: 9px;
+    letter-spacing: 0.3px;
+  }
+  .b:hover .b-ch--inside { opacity: 0.8; }
+
+  /* --- Text block --- */
+  .b-text {
+    border-radius: 3px;
     overflow: hidden;
   }
-  .card-text p {
+
+  .b-text--short {
+    padding: 28px 22px 16px;
+  }
+  .b-text--short .b-text-content {
+    font-family: var(--font-serif);
+    font-size: 22px;
+    line-height: 1.3;
+    color: var(--text);
+    letter-spacing: -0.3px;
+  }
+
+  .b-text--long {
+    padding: 20px 20px 14px;
+    max-height: 240px;
+  }
+  .b-text--long .b-text-content {
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--text-secondary);
     display: -webkit-box;
     -webkit-box-orient: vertical;
+    -webkit-line-clamp: 10;
     overflow: hidden;
   }
 
-  /* Short text: pull-quote style — large serif, centered, dramatic */
-  .card-text--short {
-    padding: 32px 24px 28px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-height: 120px;
-    justify-content: center;
-  }
-  .card-text--short p {
-    font-family: var(--font-serif);
-    font-size: 20px;
-    font-weight: 400;
-    line-height: 1.45;
-    color: var(--text);
-    letter-spacing: -0.2px;
-    -webkit-line-clamp: 5;
-  }
-  .card-text-quote {
-    font-family: var(--font-serif);
-    font-size: 52px;
-    line-height: 0.6;
-    color: var(--text-muted);
-    opacity: 0.3;
-    margin-bottom: 8px;
-    display: block;
-    user-select: none;
-  }
-
-  /* Medium text: editorial excerpt — serif, left-bordered, warm bg */
-  .card-text--medium {
-    padding: 22px 20px;
-    border-left: 3px solid transparent;
-  }
-  .card-text--medium p {
-    font-family: var(--font-serif);
-    font-size: 15px;
-    font-weight: 400;
-    line-height: 1.6;
-    color: var(--text);
-    letter-spacing: -0.1px;
-    -webkit-line-clamp: 10;
-  }
-
-  /* Long text: reader-friendly with fade */
-  .card-text--long {
-    padding: 18px 20px 0;
-    border-left: 3px solid transparent;
-    max-height: 260px;
-  }
-  .card-text--long p {
-    font-size: 12.5px;
-    line-height: 1.75;
-    color: var(--text-secondary);
-    -webkit-line-clamp: 12;
-  }
-  .card-text-fade {
+  .b-text-fade {
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
-    height: 48px;
-    background: linear-gradient(transparent, var(--bg-card));
+    height: 40px;
+    background: linear-gradient(transparent, var(--bg));
     pointer-events: none;
   }
-  .card-link {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding: 20px 18px;
-    border-left: 2.5px solid transparent;
+
+  /* --- Link block --- */
+  .b-link {
+    padding: 20px 20px 14px;
+    border-radius: 3px;
   }
-  .card-link-title {
-    font-family: var(--font-serif);
-    font-size: 15px;
-    font-weight: 400;
+  .b-link-title {
+    display: block;
+    font-size: 14px;
+    line-height: 1.4;
     color: var(--text);
-    line-height: 1.35;
     word-break: break-word;
   }
-  .card-link-domain {
+  .b-link-domain {
+    display: block;
     font-size: 10px;
     color: var(--text-muted);
+    margin-top: 4px;
     letter-spacing: 0.2px;
   }
-  .card-fallback {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-muted);
-    font-size: 10px;
+
+  /* --- Fallback --- */
+  .b-fallback {
+    padding: 20px;
+    border-radius: 3px;
+  }
+  .b-fallback-type {
+    font-size: 9px;
     text-transform: uppercase;
-    letter-spacing: 1px;
-    padding: 28px;
-    min-height: 64px;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    display: block;
   }
-
-  /* Image overlay — channel name on hover */
-  .card-overlay {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 24px 12px 10px;
-    background: linear-gradient(transparent, rgba(0,0,0,0.55));
-    opacity: 0;
-    transition: opacity var(--transition);
-    pointer-events: none;
-  }
-  .block-card:hover .card-overlay {
-    opacity: 1;
-  }
-  .card-channel-overlay {
-    font-size: 10px;
-    font-weight: 500;
-    color: rgba(255,255,255,0.9);
-    letter-spacing: 0.2px;
-  }
-
-  /* Card info — for non-image blocks */
-  .card-info {
-    padding: 10px 14px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    border-top: 1px solid var(--border-light);
-  }
-  .card-channel {
-    font-size: 10px;
-    font-weight: 500;
-    letter-spacing: 0.2px;
-  }
-  .card-title {
-    font-size: 12px;
+  .b-fallback-title {
+    display: block;
+    font-size: 13px;
     color: var(--text-secondary);
+    margin-top: 6px;
     line-height: 1.4;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
   }
 
-  /* Curated sections */
+  /* --- Curated sections --- */
   .curated-sections {
     padding: 0 28px 80px;
   }
   .curated-section {
-    padding-top: 40px;
+    padding-top: 36px;
   }
   .curated-section-header {
     display: flex;
     align-items: baseline;
-    gap: 12px;
-    margin-bottom: 20px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--border-light);
+    gap: 10px;
+    margin-bottom: 18px;
   }
   .curated-section-title {
     font-family: var(--font-serif);
-    font-size: 28px;
-    font-weight: 300;
-    font-style: italic;
+    font-size: 26px;
+    font-weight: 400;
     letter-spacing: -0.3px;
     color: var(--text);
   }
@@ -471,60 +349,27 @@ const gridStyles = `
     font-size: 11px;
     color: var(--text-muted);
   }
-  .curated-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 16px;
-  }
-  .curated-grid .block-card {
-    break-inside: unset;
-    margin-bottom: 0;
-    display: flex;
-    flex-direction: column;
-  }
-  .curated-grid .card-visual img {
-    width: 100%;
-    height: auto;
-    object-fit: contain;
-  }
 
+  /* --- Mobile --- */
   @media (max-width: 768px) {
     .block-grid {
       columns: 2;
       column-gap: 10px;
-      padding: 12px;
+      padding: 10px;
     }
-    .block-card {
-      margin-bottom: 10px;
-      border-radius: var(--radius);
-    }
-    .card-info {
-      padding: 8px 10px 10px;
-      align-items: center;
-      text-align: center;
-    }
-    .card-channel { font-size: 9px; }
-    .card-title { font-size: 11px; -webkit-line-clamp: 1; }
-    .card-text--short { padding: 20px 16px 18px; min-height: 90px; }
-    .card-text--short p { font-size: 16px; }
-    .card-text-quote { font-size: 38px; margin-bottom: 4px; }
-    .card-text--medium { padding: 16px 14px; }
-    .card-text--medium p { font-size: 13px; }
-    .card-text--long { padding: 14px 14px 0; max-height: 180px; }
-    .card-text--long p { font-size: 11px; }
-    .card-link { padding: 14px 12px; }
-    .card-link-title { font-size: 14px; }
-    .card-overlay { opacity: 1; }
+    .b { margin-bottom: 10px; }
+    .b-ch { opacity: 1; font-size: 8px; }
+    .b-text--short { padding: 18px 14px 12px; }
+    .b-text--short .b-text-content { font-size: 17px; }
+    .b-text--long { padding: 14px 14px 10px; max-height: 180px; }
+    .b-text--long .b-text-content { font-size: 11px; -webkit-line-clamp: 8; }
+    .b-link { padding: 14px 14px 10px; }
+    .b-link-title { font-size: 13px; }
+    .b-ch--inside { font-size: 8px; margin-top: 6px; }
 
-    .curated-sections { padding: 0 12px 60px; }
-    .curated-section { padding-top: 32px; }
-    .curated-section-header { margin-bottom: 14px; }
-    .curated-section-title { font-size: 22px; }
-    .curated-grid {
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
-    }
-    .curated-grid .card-visual img { height: auto; }
-    .curated-grid .card-info { text-align: center; align-items: center; }
+    .curated-sections { padding: 0 10px 60px; }
+    .curated-section { padding-top: 28px; }
+    .curated-section-title { font-size: 20px; }
+    .curated-section-header { margin-bottom: 12px; }
   }
 `;
