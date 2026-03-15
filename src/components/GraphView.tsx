@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { forceSimulation, forceLink, forceManyBody, forceCenter, forceCollide } from 'd3-force';
 import type { SimulationNodeDatum, SimulationLinkDatum } from 'd3-force';
 import type { ArenaBlock } from '../types';
@@ -56,6 +56,20 @@ export function GraphView({ blocks, categoryAssignments, onSelectBlock }: Props)
   const rafRef = useRef<number>(0);
   const [tooltip, setTooltip] = useState<{ x: number; y: number; node: GNode } | null>(null);
 
+  // Unique channels for legend
+  const channelLegend = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const item of blocks.slice(0, 150)) {
+      if (!seen.has(item.channelTitle)) {
+        seen.set(item.channelTitle, channelColor(item.channelTitle));
+      }
+      if (seen.size >= 8) break;
+    }
+    return [...seen.entries()].map(([name, color]) => ({ name, color }));
+  }, [blocks]);
+
+  const connectionMode = categoryAssignments ? 'category' : 'channel';
+
   const toWorld = useCallback((sx: number, sy: number) => {
     const t = transformRef.current;
     return { x: (sx - t.x) / t.k, y: (sy - t.y) / t.k };
@@ -72,6 +86,48 @@ export function GraphView({ blocks, categoryAssignments, onSelectBlock }: Props)
     }
     return null;
   }, [toWorld]);
+
+  // Zoom helpers
+  const applyZoom = useCallback((factor: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+    const t = transformRef.current;
+    const newK = Math.max(0.15, Math.min(5, t.k * factor));
+    t.x = cx - (cx - t.x) * (newK / t.k);
+    t.y = cy - (cy - t.y) * (newK / t.k);
+    t.k = newK;
+  }, []);
+
+  const fitToScreen = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !nodesRef.current.length) return;
+    const rect = canvas.getBoundingClientRect();
+    const nodes = nodesRef.current;
+
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const n of nodes) {
+      if (n.x == null) continue;
+      minX = Math.min(minX, n.x);
+      maxX = Math.max(maxX, n.x);
+      minY = Math.min(minY, n.y!);
+      maxY = Math.max(maxY, n.y!);
+    }
+
+    const graphW = maxX - minX + 80;
+    const graphH = maxY - minY + 80;
+    const scale = Math.min(rect.width / graphW, rect.height / graphH, 2);
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+
+    transformRef.current = {
+      x: rect.width / 2 - centerX * scale,
+      y: rect.height / 2 - centerY * scale,
+      k: scale,
+    };
+  }, []);
 
   useEffect(() => {
     if (!blocks.length) return;
@@ -386,6 +442,45 @@ export function GraphView({ blocks, categoryAssignments, onSelectBlock }: Props)
         onPointerUp={handlePointerUp}
         style={{ cursor: 'grab', touchAction: 'none' }}
       />
+
+      {/* Zoom controls */}
+      <div className="graph-controls">
+        <button className="graph-ctrl-btn" onClick={() => applyZoom(1.3)} title="Zoom in">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <line x1="7" y1="3" x2="7" y2="11" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+            <line x1="3" y1="7" x2="11" y2="7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+          </svg>
+        </button>
+        <button className="graph-ctrl-btn" onClick={() => applyZoom(1 / 1.3)} title="Zoom out">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <line x1="3" y1="7" x2="11" y2="7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+          </svg>
+        </button>
+        <button className="graph-ctrl-btn" onClick={fitToScreen} title="Fit to screen">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M2 5V2h3M9 2h3v3M12 9v3h-3M5 12H2V9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+      </div>
+
+      {/* Legend */}
+      <div className="graph-legend">
+        <div className="graph-legend-mode">
+          <span className="graph-legend-label">Connected by</span>
+          <span className="graph-legend-value">
+            {connectionMode === 'category' ? 'Shared category' : 'Same channel'}
+          </span>
+        </div>
+        <div className="graph-legend-channels">
+          {channelLegend.map(({ name, color }) => (
+            <div key={name} className="graph-legend-item">
+              <span className="graph-legend-dot" style={{ background: color }} />
+              <span className="graph-legend-name">{name}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {tooltip && (
         <div
           className="graph-tooltip"
@@ -395,6 +490,11 @@ export function GraphView({ blocks, categoryAssignments, onSelectBlock }: Props)
             {tooltip.node.block.title || tooltip.node.block.source?.title || tooltip.node.channelTitle}
           </span>
           <span className="graph-tooltip-ch">{tooltip.node.channelTitle}</span>
+          {categoryAssignments && (
+            <span className="graph-tooltip-cats">
+              {(categoryAssignments[tooltip.node.id] || []).join(' · ')}
+            </span>
+          )}
         </div>
       )}
       <style>{graphStyles}</style>
@@ -420,6 +520,95 @@ const graphStyles = `
     color: var(--text-muted);
     font-size: 13px;
   }
+
+  /* Zoom controls */
+  .graph-controls {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+  }
+  .graph-ctrl-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    color: var(--text-secondary);
+    transition: all var(--transition-fast);
+    border-bottom: 1px solid var(--border-light);
+  }
+  .graph-ctrl-btn:last-child { border-bottom: none; }
+  .graph-ctrl-btn:hover {
+    color: var(--text);
+    background: var(--accent-soft);
+  }
+
+  /* Legend */
+  .graph-legend {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 200px;
+    box-shadow: var(--shadow-md);
+  }
+  .graph-legend-mode {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .graph-legend-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+  }
+  .graph-legend-value {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .graph-legend-channels {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    border-top: 1px solid var(--border-light);
+    padding-top: 6px;
+  }
+  .graph-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .graph-legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .graph-legend-name {
+    font-size: 10px;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Tooltip */
   .graph-tooltip {
     position: absolute;
     pointer-events: none;
@@ -427,11 +616,11 @@ const graphStyles = `
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 6px 12px;
+    padding: 8px 12px;
     display: flex;
     flex-direction: column;
     gap: 2px;
-    max-width: 220px;
+    max-width: 240px;
     z-index: 10;
     box-shadow: var(--shadow-md);
   }
@@ -445,5 +634,24 @@ const graphStyles = `
   .graph-tooltip-ch {
     font-size: 10px;
     color: var(--text-muted);
+  }
+  .graph-tooltip-cats {
+    font-size: 10px;
+    font-style: italic;
+    color: var(--text-secondary);
+    font-family: var(--font-serif);
+  }
+
+  @media (max-width: 768px) {
+    .graph-legend {
+      max-width: 160px;
+      padding: 8px 10px;
+    }
+    .graph-legend-channels { display: none; }
+    .graph-controls {
+      bottom: 12px;
+      right: 12px;
+    }
+    .graph-ctrl-btn { width: 36px; height: 36px; }
   }
 `;
