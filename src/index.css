@@ -11,8 +11,8 @@
   --tag-bg: #f0f0f0;
   --tag-active: #1a1a1a;
   --tag-active-text: #fff;
-  --shadow: 0 1px 4px rgba(0,0,0,0.06);
-  --shadow-lg: 0 8px 30px rgba(0,0,0,0.12);
+  --shadow: none;
+  --shadow-lg: none;
   --radius: 4px;
   --radius-lg: 8px;
   --ai-accent: #6b5ce7;
@@ -34,8 +34,8 @@
     --tag-bg: #222;
     --tag-active: #fff;
     --tag-active-text: #000;
-    --shadow: 0 1px 4px rgba(0,0,0,0.3);
-    --shadow-lg: 0 8px 30px rgba(0,0,0,0.4);
+    --shadow: none;
+    --shadow-lg: none;
     --ai-accent: #8b7cf7;
     --ai-accent-soft: rgba(139, 124, 247, 0.12);
   }

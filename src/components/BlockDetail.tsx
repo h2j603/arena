@@ -131,7 +131,7 @@ export function BlockDetail({ block, channelTitle, onClose, categories }: Props)
           display: flex;
           flex-direction: column;
           position: relative;
-          box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+          border: 1px solid var(--border);
         }
         .detail-close {
           position: absolute;

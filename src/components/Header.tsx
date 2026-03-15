@@ -252,7 +252,7 @@ export function Header({
         .view-btn.active {
           background: var(--bg-card);
           color: var(--text);
-          box-shadow: var(--shadow);
+          border: 1px solid var(--border);
         }
 
         /* AI Categories row */

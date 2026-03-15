@@ -253,11 +253,9 @@ const gridStyles = `
     background: var(--bg-card);
     border-radius: var(--radius);
     overflow: hidden;
-    box-shadow: var(--shadow);
-    transition: box-shadow 0.2s, transform 0.2s;
+    transition: transform 0.2s;
   }
   .block-card:hover {
-    box-shadow: var(--shadow-lg);
     transform: translateY(-1px);
   }
   .block-card-visual {

@@ -345,7 +345,7 @@ const sidebarStyles = `
     top: 0;
     left: 0;
     z-index: 200;
-    box-shadow: var(--shadow-lg);
+    border-right: 1px solid var(--border);
   }
 
   @media (max-width: 768px) {

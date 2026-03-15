@@ -12,21 +12,6 @@ export interface CategoryResult {
 }
 
 const CACHE_KEY = 'arena_categories';
-const KEY_STORAGE = 'anthropic_api_key';
-const API_URL = 'https://api.anthropic.com/v1/messages';
-
-function getApiKey(): string {
-  return localStorage.getItem(KEY_STORAGE) || '';
-}
-
-function promptApiKey(): string {
-  const key = window.prompt('Enter your Anthropic API key (sk-ant-...)');
-  if (key?.trim()) {
-    localStorage.setItem(KEY_STORAGE, key.trim());
-    return key.trim();
-  }
-  return '';
-}
 
 function getCachedCategories(): CategoryResult | null {
   try {
@@ -55,12 +40,6 @@ export async function categorizeBlocks(
     if (cached) return cached;
   }
 
-  let apiKey = getApiKey();
-  if (!apiKey) {
-    apiKey = promptApiKey();
-    if (!apiKey) throw new Error('API key required');
-  }
-
   const subset = blocks.slice(0, 200);
 
   const blockList = subset.map(b => {
@@ -85,14 +64,9 @@ ${blockList}
 Return ONLY valid JSON (no markdown, no explanation):
 {"categories":["Category One","Category Two",...],"assignments":{"blockId":["Category One"],"blockId2":["Category One","Category Two"],...}}`;
 
-  const response = await fetch(API_URL, {
+  const response = await fetch('/api/categorize', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 8192,
@@ -101,10 +75,6 @@ Return ONLY valid JSON (no markdown, no explanation):
   });
 
   if (!response.ok) {
-    // If auth fails, clear stored key so user can re-enter
-    if (response.status === 401 || response.status === 403) {
-      localStorage.removeItem(KEY_STORAGE);
-    }
     const body = await response.text().catch(() => '');
     throw new Error(`API ${response.status}: ${body.slice(0, 150)}`);
   }
