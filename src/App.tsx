@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { getSlug, getUserChannels, getChannelContents } from './api';
 import { categorizeBlocks, clearCategoryCache, getCachedCategories } from './categorize';
-import type { ArenaChannel, ArenaBlock, ViewMode } from './types';
+import type { ArenaChannel, ArenaBlock } from './types';
 import type { CategoryResult } from './categorize';
 import { Sidebar } from './components/Sidebar';
 import { BlockGrid } from './components/BlockGrid';
 import { Header } from './components/Header';
-import { GraphView } from './components/GraphView';
 import { BlockDetail } from './components/BlockDetail';
 import './App.css';
 
@@ -34,7 +33,6 @@ function App() {
   const [channelData, setChannelData] = useState<Map<string, ChannelData>>(new Map());
   const [loading, setLoading] = useState(false);
   const [loadingBlocks, setLoadingBlocks] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [blockTypeFilter, setBlockTypeFilter] = useState<string>('all');
   const [error, setError] = useState<string | null>(null);
@@ -117,7 +115,15 @@ function App() {
       });
     }
 
-    return results
+    // Deduplicate blocks that appear in multiple channels (keep first occurrence)
+    const seen = new Set<number>();
+    const deduped = results.filter((item) => {
+      if (seen.has(item.block.id)) return false;
+      seen.add(item.block.id);
+      return true;
+    });
+
+    return deduped
       .filter((item) => {
         if (blockTypeFilter !== 'all' && item.block.class.toLowerCase() !== blockTypeFilter) return false;
         if (selectedCategory && categoryResult) {
@@ -229,8 +235,6 @@ function App() {
 
   const loadedChannels = useMemo(() => new Set(channelData.keys()), [channelData]);
 
-  const [graphSelectedBlock, setGraphSelectedBlock] = useState<{ block: ArenaBlock; channelTitle: string } | null>(null);
-
   const categoryAssignments = categoryResult?.assignments || null;
   const categoryNames = categoryResult?.categories || null;
 
@@ -265,8 +269,6 @@ function App() {
       />
       <main className="main-content">
         <Header
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           blockTypeFilter={blockTypeFilter}
@@ -282,28 +284,12 @@ function App() {
           categorizeError={categorizeError}
           hasBlocks={channelData.size > 0}
         />
-        {viewMode === 'graph' ? (
-          <GraphView
-            blocks={blocks}
-            categoryAssignments={categoryAssignments}
-            onSelectBlock={(item) => setGraphSelectedBlock(item || null)}
-          />
-        ) : (
-          <BlockGrid
-            blocks={blocks}
-            loading={loadingBlocks && blocks.length === 0}
-            categoryAssignments={categoryAssignments}
-            categories={categoryNames}
-          />
-        )}
-        {graphSelectedBlock && (
-          <BlockDetail
-            block={graphSelectedBlock.block}
-            channelTitle={graphSelectedBlock.channelTitle}
-            onClose={() => setGraphSelectedBlock(null)}
-            categories={categoryAssignments?.[String(graphSelectedBlock.block.id)] || null}
-          />
-        )}
+        <BlockGrid
+          blocks={blocks}
+          loading={loadingBlocks && blocks.length === 0}
+          categoryAssignments={categoryAssignments}
+          categories={categoryNames}
+        />
       </main>
     </div>
   );

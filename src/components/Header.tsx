@@ -1,10 +1,7 @@
 import { useRef, useEffect } from 'react';
-import type { ViewMode } from '../types';
 import { FIXED_CATEGORIES } from '../categorize';
 
 interface Props {
-  viewMode: ViewMode;
-  onViewModeChange: (mode: ViewMode) => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
   blockTypeFilter: string;
@@ -31,8 +28,6 @@ const BLOCK_TYPES = [
 ];
 
 export function Header({
-  viewMode,
-  onViewModeChange,
   searchQuery,
   onSearchChange,
   blockTypeFilter,
@@ -85,34 +80,6 @@ export function Header({
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
             />
-          </div>
-          <div className="view-toggle">
-            <button
-              className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`}
-              onClick={() => onViewModeChange('grid')}
-              title="Grid view"
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
-                <rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
-                <rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
-                <rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
-              </svg>
-            </button>
-            <button
-              className={`view-btn ${viewMode === 'graph' ? 'active' : ''}`}
-              onClick={() => onViewModeChange('graph')}
-              title="Graph view"
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <circle cx="3" cy="4" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
-                <circle cx="11" cy="3" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
-                <circle cx="7" cy="11" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
-                <line x1="4.5" y1="4.8" x2="6" y2="9.5" stroke="currentColor" strokeWidth="1"/>
-                <line x1="9.5" y1="4" x2="8" y2="9.5" stroke="currentColor" strokeWidth="1"/>
-                <line x1="4.8" y1="3.5" x2="9.2" y2="3" stroke="currentColor" strokeWidth="1"/>
-              </svg>
-            </button>
           </div>
         </div>
       </div>
@@ -268,30 +235,6 @@ const headerStyles = `
     border-color: var(--text-muted);
     width: 200px;
     background: var(--bg-card);
-  }
-
-  /* View toggle */
-  .view-toggle {
-    display: flex;
-    gap: 2px;
-    background: var(--border-light);
-    border-radius: var(--radius);
-    padding: 2px;
-  }
-  .view-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 4px 6px;
-    color: var(--text-muted);
-    border-radius: 3px;
-    transition: all var(--transition-fast);
-  }
-  .view-btn:hover { color: var(--text-secondary); }
-  .view-btn.active {
-    color: var(--text);
-    background: var(--bg-card);
-    box-shadow: var(--shadow-sm);
   }
 
   /* Row 2: Type filters — always visible, horizontally scrollable */

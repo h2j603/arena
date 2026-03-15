@@ -209,15 +209,26 @@ const BlockCard = memo(function BlockCard({
     return <div className="card-fallback"><span>{block.class}</span></div>;
   };
 
+  const isImage = block.class === 'Image' && block.image;
+
   return (
     <div className="block-card" onClick={onClick}>
-      <div className="card-visual">{renderVisual()}</div>
-      <div className="card-info">
-        <span className="card-channel" style={{ color }}>
-          {channelTitle}
-        </span>
-        {displayTitle && <span className="card-title">{displayTitle}</span>}
+      <div className="card-visual">
+        {renderVisual()}
+        {isImage && (
+          <div className="card-overlay">
+            <span className="card-channel-overlay">{channelTitle}</span>
+          </div>
+        )}
       </div>
+      {!isImage && (
+        <div className="card-info">
+          <span className="card-channel" style={{ color }}>
+            {channelTitle}
+          </span>
+          {displayTitle && <span className="card-title">{displayTitle}</span>}
+        </div>
+      )}
     </div>
   );
 });
@@ -388,7 +399,29 @@ const gridStyles = `
     min-height: 64px;
   }
 
-  /* Card info */
+  /* Image overlay — channel name on hover */
+  .card-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 24px 12px 10px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.55));
+    opacity: 0;
+    transition: opacity var(--transition);
+    pointer-events: none;
+  }
+  .block-card:hover .card-overlay {
+    opacity: 1;
+  }
+  .card-channel-overlay {
+    font-size: 10px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.9);
+    letter-spacing: 0.2px;
+  }
+
+  /* Card info — for non-image blocks */
   .card-info {
     padding: 10px 14px 12px;
     display: flex;
@@ -481,6 +514,7 @@ const gridStyles = `
     .card-text--long p { font-size: 11px; }
     .card-link { padding: 14px 12px; }
     .card-link-title { font-size: 14px; }
+    .card-overlay { opacity: 1; }
 
     .curated-sections { padding: 0 12px 60px; }
     .curated-section { padding-top: 32px; }

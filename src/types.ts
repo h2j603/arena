@@ -34,5 +34,3 @@ export interface ArenaChannel {
   contents: ArenaBlock[] | null;
   metadata: { description: string | null } | null;
 }
-
-export type ViewMode = 'grid' | 'graph';
