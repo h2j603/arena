@@ -451,8 +451,8 @@ const gridStyles = `
   }
   .curated-grid .card-visual img {
     width: 100%;
-    aspect-ratio: 4/3;
-    object-fit: cover;
+    height: auto;
+    object-fit: contain;
   }
 
   @media (max-width: 768px) {
@@ -490,7 +490,7 @@ const gridStyles = `
       grid-template-columns: repeat(2, 1fr);
       gap: 10px;
     }
-    .curated-grid .card-visual img { aspect-ratio: 1/1; }
+    .curated-grid .card-visual img { height: auto; }
     .curated-grid .card-info { text-align: center; align-items: center; }
   }
 `;
