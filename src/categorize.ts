@@ -4,11 +4,13 @@ interface BlockMeta {
   type: string;
   description: string | null;
   channelTitle: string;
+  imageUrl: string | null;
 }
 
 export interface CategoryResult {
   categories: string[];
   assignments: Record<string, string[]>;
+  descriptions: Record<string, string>;
 }
 
 const CACHE_KEY = 'arena_categories';
@@ -40,29 +42,50 @@ export async function categorizeBlocks(
     if (cached) return cached;
   }
 
-  const subset = blocks.slice(0, 200);
+  const subset = blocks.slice(0, 80);
 
-  const blockList = subset.map(b => {
-    const title = b.title || 'Untitled';
-    const desc = b.description ? ` | ${b.description.slice(0, 80)}` : '';
-    return `${b.id}: [${b.type}] "${title}" (ch: ${b.channelTitle})${desc}`;
-  }).join('\n');
+  // Build multimodal content: images + text labels
+  const content: Array<Record<string, unknown>> = [];
+  const nonImageParts: string[] = [];
 
-  const prompt = `You are a creative art curator with a poetic sensibility. Below are references from a personal inspiration archive on Are.na. Your task is to analyze them and create evocative, artistic categories to group them.
+  for (const b of subset) {
+    if (b.imageUrl) {
+      content.push({
+        type: 'image',
+        source: { type: 'url', url: b.imageUrl },
+      });
+      content.push({
+        type: 'text',
+        text: `[Block ${b.id}: "${b.title || 'Untitled'}" — ch: "${b.channelTitle}"]`,
+      });
+    } else {
+      const title = b.title || 'Untitled';
+      const desc = b.description ? ` | ${b.description.slice(0, 80)}` : '';
+      nonImageParts.push(`${b.id}: [${b.type}] "${title}" (ch: ${b.channelTitle})${desc}`);
+    }
+  }
 
+  const promptText = `You are a creative art curator with a poetic sensibility. Above are images and references from a personal inspiration archive on Are.na.
+
+Your task:
+1. LOOK at each image carefully — analyze colors, composition, subject, mood, texture, style
+2. Create evocative, artistic CATEGORIES to group ALL references based on what you actually SEE
+3. Write a brief visual DESCRIPTION for each image block (what you see, the mood, the aesthetic)
+
+${nonImageParts.length > 0 ? `Non-image references:\n${nonImageParts.join('\n')}\n` : ''}
 Guidelines for categories:
 - Create 6-15 categories depending on the diversity of content
 - Category names should be poetic, evocative, and specific — not generic
 - Think like an art curator naming sections of an exhibition
-- Examples of good category names: "Light & Atmosphere", "Digital Rituals", "Sonic Textures", "Found Typography", "Organic Machines", "Color Fields", "Invisible Systems", "Body & Space"
+- Base categories on VISUAL content you actually see, not just titles/metadata
+- Examples: "Light & Atmosphere", "Digital Rituals", "Sonic Textures", "Found Typography", "Organic Machines", "Color Fields", "Invisible Systems", "Body & Space"
 - Each reference should be assigned to 1-2 categories
 - Categories should feel cohesive but surprising
 
-References:
-${blockList}
-
 Return ONLY valid JSON (no markdown, no explanation):
-{"categories":["Category One","Category Two",...],"assignments":{"blockId":["Category One"],"blockId2":["Category One","Category Two"],...}}`;
+{"categories":["Category One","Category Two",...],"assignments":{"blockId":["Category One"],...},"descriptions":{"blockId":"Brief visual description of what you see in this image",...}}`;
+
+  content.push({ type: 'text', text: promptText });
 
   const response = await fetch('/api/categorize', {
     method: 'POST',
@@ -70,8 +93,8 @@ Return ONLY valid JSON (no markdown, no explanation):
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 8192,
-      messages: [{ role: 'user', content: prompt }]
-    })
+      messages: [{ role: 'user', content }],
+    }),
   });
 
   if (!response.ok) {
@@ -85,10 +108,15 @@ Return ONLY valid JSON (no markdown, no explanation):
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('Invalid response format');
 
-  const result: CategoryResult = JSON.parse(jsonMatch[0]);
+  const parsed = JSON.parse(jsonMatch[0]);
+  const result: CategoryResult = {
+    categories: parsed.categories || [],
+    assignments: parsed.assignments || {},
+    descriptions: parsed.descriptions || {},
+  };
 
-  if (!result.categories || !result.assignments) {
-    throw new Error('Invalid category data');
+  if (!result.categories.length) {
+    throw new Error('No categories generated');
   }
 
   setCachedCategories(result);

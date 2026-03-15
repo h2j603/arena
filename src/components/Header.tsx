@@ -102,6 +102,20 @@ export function Header({
                 <line x1="1" y1="11" x2="13" y2="11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
               </svg>
             </button>
+            <button
+              className={`view-btn ${viewMode === 'graph' ? 'active' : ''}`}
+              onClick={() => onViewModeChange('graph')}
+              title="Graph view"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <circle cx="3" cy="4" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
+                <circle cx="11" cy="3" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
+                <circle cx="7" cy="11" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
+                <line x1="4.5" y1="4.8" x2="6" y2="9.5" stroke="currentColor" strokeWidth="1"/>
+                <line x1="9.5" y1="4" x2="8" y2="9.5" stroke="currentColor" strokeWidth="1"/>
+                <line x1="4.8" y1="3.5" x2="9.2" y2="3" stroke="currentColor" strokeWidth="1"/>
+              </svg>
+            </button>
           </div>
         </div>
       </div>

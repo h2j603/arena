@@ -6,6 +6,8 @@ import type { CategoryResult } from './categorize';
 import { Sidebar } from './components/Sidebar';
 import { BlockGrid } from './components/BlockGrid';
 import { Header } from './components/Header';
+import { GraphView } from './components/GraphView';
+import { BlockDetail } from './components/BlockDetail';
 import './App.css';
 
 interface ChannelData {
@@ -131,7 +133,8 @@ function App() {
           const desc = (item.block.description || '').toLowerCase();
           const content = (item.block.content || '').toLowerCase();
           const sourceTitle = (item.block.source?.title || '').toLowerCase();
-          return title.includes(q) || desc.includes(q) || content.includes(q) || sourceTitle.includes(q);
+          const visionDesc = (categoryResult?.descriptions?.[String(item.block.id)] || '').toLowerCase();
+          return title.includes(q) || desc.includes(q) || content.includes(q) || sourceTitle.includes(q) || visionDesc.includes(q);
         }
         return true;
       })
@@ -165,7 +168,7 @@ function App() {
     setIsCategorizing(true);
     setCategorizeError(null);
     try {
-      const allBlocks: { id: number; title: string | null; type: string; description: string | null; channelTitle: string }[] = [];
+      const allBlocks: { id: number; title: string | null; type: string; description: string | null; channelTitle: string; imageUrl: string | null }[] = [];
       channelDataRef.current.forEach((data) => {
         data.blocks.forEach((b) => {
           allBlocks.push({
@@ -174,6 +177,7 @@ function App() {
             type: b.class,
             description: b.description,
             channelTitle: data.channel.title,
+            imageUrl: b.image?.display?.url || null,
           });
         });
       });
@@ -195,6 +199,9 @@ function App() {
 
   // Memoize loadedChannels set to avoid new object every render
   const loadedChannels = useMemo(() => new Set(channelData.keys()), [channelData]);
+
+  // Graph detail modal state
+  const [graphSelectedBlock, setGraphSelectedBlock] = useState<{ block: ArenaBlock; channelTitle: string } | null>(null);
 
   // Memoize category assignments
   const categoryAssignments = categoryResult?.assignments || null;
@@ -248,12 +255,28 @@ function App() {
           categorizeError={categorizeError}
           hasBlocks={channelData.size > 0}
         />
-        <BlockGrid
-          blocks={blocks}
-          viewMode={viewMode}
-          loading={loadingBlocks && blocks.length === 0}
-          categoryAssignments={categoryAssignments}
-        />
+        {viewMode === 'graph' ? (
+          <GraphView
+            blocks={blocks}
+            categoryAssignments={categoryAssignments}
+            onSelectBlock={setGraphSelectedBlock}
+          />
+        ) : (
+          <BlockGrid
+            blocks={blocks}
+            viewMode={viewMode}
+            loading={loadingBlocks && blocks.length === 0}
+            categoryAssignments={categoryAssignments}
+          />
+        )}
+        {graphSelectedBlock && (
+          <BlockDetail
+            block={graphSelectedBlock.block}
+            channelTitle={graphSelectedBlock.channelTitle}
+            onClose={() => setGraphSelectedBlock(null)}
+            categories={categoryAssignments?.[String(graphSelectedBlock.block.id)] || null}
+          />
+        )}
       </main>
     </div>
   );
