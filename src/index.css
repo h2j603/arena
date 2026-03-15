@@ -107,3 +107,12 @@ button {
 img {
   display: block;
 }
+
+/* Disable hover effects on touch devices */
+@media (hover: none) {
+  .block-card:hover {
+    border-color: var(--border-light);
+    box-shadow: none;
+  }
+  .sidebar-vis { opacity: 0.6 !important; }
+}

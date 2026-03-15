@@ -58,8 +58,15 @@
   line-height: 1.6;
 }
 
+.sidebar-collapsed-active .main-content {
+  margin-left: 40px;
+}
+
 @media (max-width: 768px) {
   .main-content {
+    margin-left: 0;
+  }
+  .sidebar-collapsed-active .main-content {
     margin-left: 0;
   }
   .loading-title {

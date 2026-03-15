@@ -73,7 +73,7 @@ export function BlockDetail({ block, channelTitle, onClose, categories }: Props)
                   <dt>Source</dt>
                   <dd>
                     <a href={block.source.url} target="_blank" rel="noreferrer" className="detail-source-link">
-                      {new URL(block.source.url).hostname}
+                      {(() => { try { return new URL(block.source!.url).hostname; } catch { return block.source!.url; } })()}
                     </a>
                   </dd>
                 </div>
@@ -99,7 +99,7 @@ export function BlockDetail({ block, channelTitle, onClose, categories }: Props)
                 rel="noreferrer"
                 className="detail-action"
               >
-                Open Source
+                Visit Source
               </a>
             )}
           </div>

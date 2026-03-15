@@ -58,13 +58,12 @@ export function Header({
     }
   }, [selectedCategory]);
 
-  // Use fixed categories always — show them even before AI responds
-  // Once AI assigns, `categories` will contain only the ones with assignments
   const displayCategories = categories || [...FIXED_CATEGORIES];
   const isLoaded = categories !== null;
 
   return (
     <header className="header">
+      {/* Row 1: Title + search + view toggle */}
       <div className="header-bar">
         <div className="header-identity">
           <h2 className="header-title">
@@ -73,66 +72,65 @@ export function Header({
           <span className="header-count">{totalBlocks}</span>
         </div>
 
-        <div className="header-controls">
-          <div className="header-types">
-            {BLOCK_TYPES.map((t) => (
-              <button
-                key={t.value}
-                className={`type-btn ${blockTypeFilter === t.value ? 'active' : ''}`}
-                onClick={() => onBlockTypeFilterChange(t.value)}
-              >
-                {t.label}
-              </button>
-            ))}
+        <div className="header-actions">
+          <div className="search-wrap">
+            <svg className="search-icon" width="13" height="13" viewBox="0 0 13 13" fill="none">
+              <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.3"/>
+              <path d="M8.5 8.5L11.5 11.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+            </svg>
+            <input
+              type="text"
+              className="header-search"
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+            />
           </div>
-
-          <div className="header-actions">
-            <div className="search-wrap">
-              <svg className="search-icon" width="13" height="13" viewBox="0 0 13 13" fill="none">
-                <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.3"/>
-                <path d="M8.5 8.5L11.5 11.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+          <div className="view-toggle">
+            <button
+              className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`}
+              onClick={() => onViewModeChange('grid')}
+              title="Grid view"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+                <rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+                <rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+                <rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
               </svg>
-              <input
-                type="text"
-                className="header-search"
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => onSearchChange(e.target.value)}
-              />
-            </div>
-            <div className="view-toggle">
-              <button
-                className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`}
-                onClick={() => onViewModeChange('grid')}
-                title="Grid view"
-              >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
-                  <rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
-                  <rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
-                  <rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
-                </svg>
-              </button>
-              <button
-                className={`view-btn ${viewMode === 'graph' ? 'active' : ''}`}
-                onClick={() => onViewModeChange('graph')}
-                title="Graph view"
-              >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <circle cx="3" cy="4" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
-                  <circle cx="11" cy="3" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
-                  <circle cx="7" cy="11" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
-                  <line x1="4.5" y1="4.8" x2="6" y2="9.5" stroke="currentColor" strokeWidth="1"/>
-                  <line x1="9.5" y1="4" x2="8" y2="9.5" stroke="currentColor" strokeWidth="1"/>
-                  <line x1="4.8" y1="3.5" x2="9.2" y2="3" stroke="currentColor" strokeWidth="1"/>
-                </svg>
-              </button>
-            </div>
+            </button>
+            <button
+              className={`view-btn ${viewMode === 'graph' ? 'active' : ''}`}
+              onClick={() => onViewModeChange('graph')}
+              title="Graph view"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <circle cx="3" cy="4" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
+                <circle cx="11" cy="3" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
+                <circle cx="7" cy="11" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
+                <line x1="4.5" y1="4.8" x2="6" y2="9.5" stroke="currentColor" strokeWidth="1"/>
+                <line x1="9.5" y1="4" x2="8" y2="9.5" stroke="currentColor" strokeWidth="1"/>
+                <line x1="4.8" y1="3.5" x2="9.2" y2="3" stroke="currentColor" strokeWidth="1"/>
+              </svg>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Category strip — always rendered with fixed structure */}
+      {/* Row 2: Type filters — always visible, scrollable */}
+      <div className="header-types-strip">
+        {BLOCK_TYPES.map((t) => (
+          <button
+            key={t.value}
+            className={`type-btn ${blockTypeFilter === t.value ? 'active' : ''}`}
+            onClick={() => onBlockTypeFilterChange(t.value)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Row 3: Category tabs — fixed structure, scrollable */}
       {hasBlocks && (
         <div className="header-cat-strip">
           <div className="cat-scroll" ref={catScrollRef}>
@@ -201,11 +199,12 @@ const headerStyles = `
     border-bottom: 1px solid var(--border);
   }
 
+  /* Row 1 */
   .header-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 20px;
+    gap: 16px;
     padding: 0 28px;
     height: var(--header-height);
   }
@@ -213,8 +212,8 @@ const headerStyles = `
     display: flex;
     align-items: baseline;
     gap: 8px;
-    flex-shrink: 0;
     min-width: 0;
+    flex: 1;
   }
   .header-title {
     font-family: var(--font-serif);
@@ -229,38 +228,16 @@ const headerStyles = `
     font-size: 11px;
     color: var(--text-muted);
     font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
   }
-
-  .header-controls {
+  .header-actions {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 8px;
     flex-shrink: 0;
   }
 
-  .header-types {
-    display: flex;
-    gap: 1px;
-    background: var(--border-light);
-    border-radius: var(--radius);
-    padding: 2px;
-  }
-  .type-btn {
-    padding: 3px 10px;
-    font-size: 11px;
-    color: var(--text-muted);
-    border-radius: 3px;
-    transition: all var(--transition-fast);
-    letter-spacing: 0.2px;
-  }
-  .type-btn:hover { color: var(--text-secondary); }
-  .type-btn.active {
-    color: var(--text);
-    background: var(--bg-card);
-    box-shadow: var(--shadow-sm);
-    font-weight: 500;
-  }
-
+  /* Search */
   .search-wrap {
     position: relative;
     display: flex;
@@ -291,12 +268,7 @@ const headerStyles = `
     background: var(--bg-card);
   }
 
-  .header-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
+  /* View toggle */
   .view-toggle {
     display: flex;
     gap: 2px;
@@ -320,13 +292,41 @@ const headerStyles = `
     box-shadow: var(--shadow-sm);
   }
 
-  /* Category strip — fixed height, no layout shift */
+  /* Row 2: Type filters — always visible, horizontally scrollable */
+  .header-types-strip {
+    display: flex;
+    gap: 1px;
+    padding: 0 28px;
+    border-top: 1px solid var(--border-light);
+    height: 32px;
+    align-items: center;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .header-types-strip::-webkit-scrollbar { display: none; }
+  .type-btn {
+    padding: 3px 10px;
+    font-size: 11px;
+    color: var(--text-muted);
+    border-radius: 3px;
+    transition: all var(--transition-fast);
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .type-btn:hover { color: var(--text-secondary); }
+  .type-btn.active {
+    color: var(--text);
+    font-weight: 500;
+    background: var(--accent-soft);
+  }
+
+  /* Row 3: Category strip */
   .header-cat-strip {
     border-top: 1px solid var(--border-light);
     height: 36px;
     display: flex;
     align-items: center;
-    overflow: hidden;
   }
   .cat-scroll {
     display: flex;
@@ -337,6 +337,7 @@ const headerStyles = `
     scrollbar-width: none;
     flex: 1;
     height: 100%;
+    -webkit-overflow-scrolling: touch;
   }
   .cat-scroll::-webkit-scrollbar { display: none; }
 
@@ -430,18 +431,22 @@ const headerStyles = `
     .header-bar {
       padding: 0 14px 0 48px;
       gap: 8px;
-      height: 46px;
-    }
-    .header-identity {
-      flex: 1;
-      min-width: 0;
+      height: 44px;
     }
     .header-title { font-size: 17px; }
-    .header-types { display: none; }
-    .header-search { width: 100px; font-size: 11px; }
-    .header-search:focus { width: 140px; }
+    .header-search { width: 90px; font-size: 11px; padding-left: 24px; }
+    .header-search:focus { width: 120px; }
+    .search-icon { left: 6px; }
+
+    .header-types-strip {
+      padding: 0 14px;
+      height: 30px;
+      gap: 0;
+    }
+    .type-btn { font-size: 10px; padding: 2px 8px; }
+
     .header-cat-strip { height: 34px; }
-    .cat-scroll { padding: 0 14px; }
+    .cat-scroll { padding: 0 14px; gap: 3px; }
     .cat-tab { font-size: 10px; padding: 3px 10px; }
   }
 `;
