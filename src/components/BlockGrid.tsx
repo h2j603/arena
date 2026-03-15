@@ -1,4 +1,4 @@
-import { useState, memo, useMemo } from 'react';
+import { useState, memo } from 'react';
 import type { ArenaBlock } from '../types';
 import { BlockDetail } from './BlockDetail';
 
@@ -6,27 +6,10 @@ interface Props {
   blocks: { block: ArenaBlock; channelTitle: string }[];
   loading: boolean;
   categoryAssignments: Record<string, string[]> | null;
-  categories: string[] | null;
 }
 
-export function BlockGrid({ blocks, loading, categoryAssignments, categories }: Props) {
+export function BlockGrid({ blocks, loading, categoryAssignments }: Props) {
   const [selectedBlock, setSelectedBlock] = useState<{ block: ArenaBlock; channelTitle: string } | null>(null);
-
-  const groupedBlocks = useMemo(() => {
-    if (!categories || !categoryAssignments) return null;
-    const groups = new Map<string, { block: ArenaBlock; channelTitle: string }[]>();
-    for (const cat of categories) groups.set(cat, []);
-    for (const item of blocks) {
-      const cats = categoryAssignments[String(item.block.id)];
-      if (cats) {
-        for (const cat of cats) groups.get(cat)?.push(item);
-      }
-    }
-    for (const [cat, items] of groups) {
-      if (items.length === 0) groups.delete(cat);
-    }
-    return groups;
-  }, [blocks, categories, categoryAssignments]);
 
   if (loading) {
     return <div className="grid-loading"><div className="loading-spinner" /></div>;
@@ -41,49 +24,19 @@ export function BlockGrid({ blocks, loading, categoryAssignments, categories }: 
     );
   }
 
-  const renderGrid = (items: { block: ArenaBlock; channelTitle: string }[], className = 'block-grid') => (
-    <div className={className}>
-      {items.map((item) => (
-        <BlockCard
-          key={`${item.block.id}-${item.channelTitle}`}
-          block={item.block}
-          channelTitle={item.channelTitle}
-          onClick={() => setSelectedBlock(item)}
-        />
-      ))}
-    </div>
-  );
-
-  if (groupedBlocks) {
-    return (
-      <>
-        <div className="curated-sections">
-          {[...groupedBlocks.entries()].map(([cat, items]) => (
-            <section key={cat} className="curated-section">
-              <div className="curated-section-header">
-                <h2 className="curated-section-title">{cat}</h2>
-                <span className="curated-section-count">{items.length}</span>
-              </div>
-              {renderGrid(items, 'block-grid')}
-            </section>
-          ))}
-        </div>
-        {selectedBlock && (
-          <BlockDetail
-            block={selectedBlock.block}
-            channelTitle={selectedBlock.channelTitle}
-            onClose={() => setSelectedBlock(null)}
-            categories={categoryAssignments?.[String(selectedBlock.block.id)] || null}
-          />
-        )}
-        <style>{gridStyles}</style>
-      </>
-    );
-  }
-
   return (
     <>
-      {renderGrid(blocks)}
+      <div className="block-grid">
+        {blocks.map((item) => (
+          <BlockCard
+            key={`${item.block.id}-${item.channelTitle}`}
+            block={item.block}
+            channelTitle={item.channelTitle}
+            onClick={() => setSelectedBlock(item)}
+          />
+        ))}
+      </div>
+
       {selectedBlock && (
         <BlockDetail
           block={selectedBlock.block}
@@ -110,7 +63,7 @@ const BlockCard = memo(function BlockCard({
   const content = block.content || '';
   const isShortText = block.class === 'Text' && content.length < 140;
 
-  // Image block — just the image, nothing else
+  // Image block
   if (block.image) {
     return (
       <div className="b" onClick={onClick}>
@@ -152,7 +105,7 @@ const BlockCard = memo(function BlockCard({
     );
   }
 
-  // Fallback (Media, Attachment, etc.)
+  // Fallback
   return (
     <div className="b b-fallback" onClick={onClick}>
       <span className="b-fallback-type">{block.class}</span>
@@ -181,9 +134,10 @@ const gridStyles = `
   }
   .grid-empty-title {
     font-family: var(--font-serif);
-    font-size: 18px;
+    font-size: 24px;
     color: var(--text-secondary);
     font-weight: 400;
+    letter-spacing: -0.3px;
   }
   .grid-empty-sub { font-size: 12px; }
 
@@ -229,7 +183,7 @@ const gridStyles = `
   }
   .b:hover .b-ch { opacity: 1; }
 
-  /* Channel label inside text/link blocks — always visible, muted */
+  /* Channel label inside text/link blocks */
   .b-ch--inside {
     position: relative;
     bottom: auto;
@@ -251,14 +205,14 @@ const gridStyles = `
   }
 
   .b-text--short {
-    padding: 28px 22px 16px;
+    padding: 32px 24px 18px;
   }
   .b-text--short .b-text-content {
     font-family: var(--font-serif);
-    font-size: 22px;
-    line-height: 1.3;
+    font-size: 28px;
+    line-height: 1.2;
     color: var(--text);
-    letter-spacing: -0.3px;
+    letter-spacing: -0.5px;
   }
 
   .b-text--long {
@@ -325,31 +279,6 @@ const gridStyles = `
     line-height: 1.4;
   }
 
-  /* --- Curated sections --- */
-  .curated-sections {
-    padding: 0 28px 80px;
-  }
-  .curated-section {
-    padding-top: 36px;
-  }
-  .curated-section-header {
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-    margin-bottom: 18px;
-  }
-  .curated-section-title {
-    font-family: var(--font-serif);
-    font-size: 26px;
-    font-weight: 400;
-    letter-spacing: -0.3px;
-    color: var(--text);
-  }
-  .curated-section-count {
-    font-size: 11px;
-    color: var(--text-muted);
-  }
-
   /* --- Mobile --- */
   @media (max-width: 768px) {
     .block-grid {
@@ -359,17 +288,12 @@ const gridStyles = `
     }
     .b { margin-bottom: 10px; }
     .b-ch { opacity: 1; font-size: 8px; }
-    .b-text--short { padding: 18px 14px 12px; }
-    .b-text--short .b-text-content { font-size: 17px; }
+    .b-text--short { padding: 22px 16px 14px; }
+    .b-text--short .b-text-content { font-size: 22px; }
     .b-text--long { padding: 14px 14px 10px; max-height: 180px; }
     .b-text--long .b-text-content { font-size: 11px; -webkit-line-clamp: 8; }
     .b-link { padding: 14px 14px 10px; }
     .b-link-title { font-size: 13px; }
     .b-ch--inside { font-size: 8px; margin-top: 6px; }
-
-    .curated-sections { padding: 0 10px 60px; }
-    .curated-section { padding-top: 28px; }
-    .curated-section-title { font-size: 20px; }
-    .curated-section-header { margin-bottom: 12px; }
   }
 `;
