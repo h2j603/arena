@@ -44,10 +44,10 @@ export function BlockDetail({ block, channelTitle, onClose, categories }: Props)
           )}
 
           {block.class === 'Text' && block.content_html && (
-            <div
-              className="detail-text-body"
-              dangerouslySetInnerHTML={{ __html: block.content_html }}
-            />
+            <div className={`detail-text-body ${(block.content || '').length < 200 ? 'detail-text-body--short' : ''}`}>
+              {(block.content || '').length < 200 && <span className="detail-text-mark">"</span>}
+              <div dangerouslySetInnerHTML={{ __html: block.content_html }} />
+            </div>
           )}
 
           <div className="detail-meta">
@@ -178,12 +178,39 @@ const detailStyles = `
     object-fit: contain;
   }
   .detail-text-body {
-    padding: 28px;
-    font-size: 14px;
-    line-height: 1.75;
+    padding: 32px 36px;
+    font-size: 15px;
+    line-height: 1.8;
     color: var(--text);
-    max-height: 50vh;
+    max-height: 55vh;
     overflow-y: auto;
+    font-family: var(--font-serif);
+    letter-spacing: -0.1px;
+  }
+  .detail-text-body--short {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 48px 40px 40px;
+    min-height: 200px;
+    justify-content: center;
+    background: var(--accent-soft);
+  }
+  .detail-text-body--short div {
+    font-size: 22px;
+    line-height: 1.5;
+    font-weight: 400;
+  }
+  .detail-text-mark {
+    font-family: var(--font-serif);
+    font-size: 72px;
+    line-height: 0.5;
+    color: var(--text-muted);
+    opacity: 0.2;
+    margin-bottom: 16px;
+    display: block;
+    user-select: none;
   }
   .detail-meta {
     padding: 24px 28px 28px;
