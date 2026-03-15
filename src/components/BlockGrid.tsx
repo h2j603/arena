@@ -1,4 +1,4 @@
-import { useState, memo } from 'react';
+import { useState, memo, useMemo, useRef, useCallback } from 'react';
 import type { ArenaBlock, ViewMode } from '../types';
 import { BlockDetail } from './BlockDetail';
 
@@ -7,6 +7,7 @@ interface Props {
   viewMode: ViewMode;
   loading: boolean;
   categoryAssignments: Record<string, string[]> | null;
+  categories: string[] | null;
 }
 
 // Deterministic color from channel name
@@ -23,10 +24,8 @@ function channelColor(name: string): string {
 function getDisplayTitle(block: ArenaBlock): string | null {
   switch (block.class) {
     case 'Image':
-      // Image filenames are meaningless - don't show
       return null;
     case 'Text':
-      // Text blocks rarely have titles - show content preview
       return block.content?.slice(0, 120)?.replace(/\n/g, ' ') || null;
     case 'Link':
       return block.source?.title || block.title || null;
@@ -35,7 +34,6 @@ function getDisplayTitle(block: ArenaBlock): string | null {
   }
 }
 
-// Get list title
 function getListTitle(block: ArenaBlock): string {
   switch (block.class) {
     case 'Image':
@@ -49,8 +47,36 @@ function getListTitle(block: ArenaBlock): string {
   }
 }
 
-export function BlockGrid({ blocks, viewMode, loading, categoryAssignments }: Props) {
+export function BlockGrid({ blocks, viewMode, loading, categoryAssignments, categories }: Props) {
   const [selectedBlock, setSelectedBlock] = useState<{ block: ArenaBlock; channelTitle: string } | null>(null);
+  const sectionRefs = useRef<Map<string, HTMLElement>>(new Map());
+
+  const scrollToSection = useCallback((cat: string) => {
+    const el = sectionRefs.current.get(cat);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
+  // Group blocks by category for curated view
+  const groupedBlocks = useMemo(() => {
+    if (!categories || !categoryAssignments) return null;
+    const groups = new Map<string, { block: ArenaBlock; channelTitle: string }[]>();
+    for (const cat of categories) {
+      groups.set(cat, []);
+    }
+    for (const item of blocks) {
+      const cats = categoryAssignments[String(item.block.id)];
+      if (cats) {
+        for (const cat of cats) {
+          groups.get(cat)?.push(item);
+        }
+      }
+    }
+    // Remove empty categories
+    for (const [cat, items] of groups) {
+      if (items.length === 0) groups.delete(cat);
+    }
+    return groups;
+  }, [blocks, categories, categoryAssignments]);
 
   if (loading) {
     return (
@@ -66,6 +92,58 @@ export function BlockGrid({ blocks, viewMode, loading, categoryAssignments }: Pr
         <p>No references found</p>
         <p className="grid-empty-sub">Select a channel from the sidebar to explore</p>
       </div>
+    );
+  }
+
+  // Curated magazine layout when categories exist
+  if (groupedBlocks && viewMode === 'grid') {
+    return (
+      <>
+        <div className="curated-nav">
+          {[...groupedBlocks.keys()].map((cat) => (
+            <button key={cat} className="curated-nav-item" onClick={() => scrollToSection(cat)}>
+              {cat}
+              <span className="curated-nav-count">{groupedBlocks.get(cat)?.length}</span>
+            </button>
+          ))}
+        </div>
+        <div className="curated-view">
+          {[...groupedBlocks.entries()].map(([cat, items]) => (
+            <section
+              key={cat}
+              className="curated-section"
+              ref={(el) => { if (el) sectionRefs.current.set(cat, el); }}
+            >
+              <div className="curated-section-header">
+                <h2 className="curated-section-title">{cat}</h2>
+                <span className="curated-section-count">{items.length}</span>
+              </div>
+              <div className={`curated-grid curated-grid-${Math.min(items.length, 6)}`}>
+                {items.map((item, idx) => (
+                  <CuratedCard
+                    key={`${item.block.id}-${cat}`}
+                    block={item.block}
+                    channelTitle={item.channelTitle}
+                    featured={idx === 0 && items.length > 2}
+                    onClick={() => setSelectedBlock(item)}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+
+        {selectedBlock && (
+          <BlockDetail
+            block={selectedBlock.block}
+            channelTitle={selectedBlock.channelTitle}
+            onClose={() => setSelectedBlock(null)}
+            categories={categoryAssignments?.[String(selectedBlock.block.id)] || null}
+          />
+        )}
+        <style>{gridStyles}</style>
+        <style>{curatedStyles}</style>
+      </>
     );
   }
 
@@ -130,8 +208,7 @@ const BlockCard = memo(function BlockCard({
           <span className="block-list-title">
             {getListTitle(block)}
           </span>
-          <span className="block-list-channel">
-            <span className="channel-dot" style={{ background: color }} />
+          <span className="block-list-channel" style={{ borderColor: color, color }}>
             {channelTitle}
           </span>
         </div>
@@ -189,8 +266,7 @@ const BlockCard = memo(function BlockCard({
         {renderVisual()}
       </div>
       <div className="block-card-meta">
-        <span className="block-card-channel">
-          <span className="channel-dot" style={{ background: color }} />
+        <span className="block-card-channel" style={{ borderColor: color, color }}>
           {channelTitle}
         </span>
         {displayTitle && (
@@ -207,6 +283,211 @@ const BlockCard = memo(function BlockCard({
     </div>
   );
 });
+
+const CuratedCard = memo(function CuratedCard({
+  block,
+  channelTitle,
+  featured,
+  onClick,
+}: {
+  block: ArenaBlock;
+  channelTitle: string;
+  featured: boolean;
+  onClick: () => void;
+}) {
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const color = channelColor(channelTitle);
+
+  const renderVisual = () => {
+    if (block.image) {
+      return (
+        <img
+          src={block.image.display.url}
+          alt=""
+          loading="lazy"
+          onLoad={() => setImgLoaded(true)}
+          style={{ opacity: imgLoaded ? 1 : 0 }}
+        />
+      );
+    }
+    if (block.class === 'Text') {
+      return (
+        <div className="curated-card-text">
+          <p>{block.content?.slice(0, 200)}</p>
+        </div>
+      );
+    }
+    if (block.class === 'Link') {
+      return (
+        <div className="curated-card-link">
+          <span className="curated-card-link-title">{block.source?.title || block.title || 'Link'}</span>
+          {block.source?.url && (
+            <span className="curated-card-link-host">{new URL(block.source.url).hostname}</span>
+          )}
+        </div>
+      );
+    }
+    return <div className="curated-card-fallback">{block.class}</div>;
+  };
+
+  return (
+    <div className={`curated-card ${featured ? 'curated-card-featured' : ''}`} onClick={onClick}>
+      <div className="curated-card-visual">
+        {renderVisual()}
+      </div>
+      <span className="curated-card-channel" style={{ borderColor: color, color }}>{channelTitle}</span>
+    </div>
+  );
+});
+
+const curatedStyles = `
+  .curated-nav {
+    display: flex;
+    gap: 12px;
+    padding: 16px 24px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky;
+    top: 52px;
+    z-index: 40;
+  }
+  .curated-nav::-webkit-scrollbar { display: none; }
+  .curated-nav-item {
+    font-size: 12px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    transition: color 0.15s;
+    font-family: var(--font-serif);
+    font-style: italic;
+  }
+  .curated-nav-item:hover { color: var(--text); }
+  .curated-nav-count {
+    font-family: var(--font-sans);
+    font-style: normal;
+    font-size: 9px;
+    color: var(--text-muted);
+  }
+
+  .curated-view {
+    padding: 0 24px 60px;
+  }
+  .curated-section {
+    padding-top: 40px;
+  }
+  .curated-section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .curated-section-title {
+    font-family: var(--font-serif);
+    font-size: 28px;
+    font-weight: 400;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+  .curated-section-count {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .curated-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .curated-grid-1 { grid-template-columns: 1fr; max-width: 400px; }
+  .curated-grid-2 { grid-template-columns: repeat(2, 1fr); }
+  .curated-grid-3 { grid-template-columns: repeat(3, 1fr); }
+
+  .curated-card {
+    cursor: pointer;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .curated-card-featured {
+    grid-column: span 2;
+    grid-row: span 2;
+  }
+  .curated-card-visual {
+    width: 100%;
+    overflow: hidden;
+    background: var(--tag-bg);
+  }
+  .curated-card-visual img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: opacity 0.3s ease;
+  }
+  .curated-card-featured .curated-card-visual img {
+    min-height: 300px;
+  }
+  .curated-card-channel {
+    font-size: 9px;
+    letter-spacing: 0.3px;
+    border: 1px solid;
+    border-radius: 20px;
+    padding: 2px 8px;
+    width: fit-content;
+    opacity: 0.7;
+  }
+  .curated-card-text {
+    padding: 16px;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--text-secondary);
+  }
+  .curated-card-text p {
+    display: -webkit-box;
+    -webkit-line-clamp: 6;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .curated-card-link {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 20px 16px;
+  }
+  .curated-card-link-title {
+    font-family: var(--font-serif);
+    font-size: 15px;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  .curated-card-link-host {
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+  .curated-card-fallback {
+    padding: 20px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+  }
+
+  @media (max-width: 768px) {
+    .curated-view { padding: 0 12px 40px; }
+    .curated-section { padding-top: 28px; }
+    .curated-section-title { font-size: 22px; }
+    .curated-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .curated-card-featured { grid-column: span 2; grid-row: span 1; }
+    .curated-nav { padding: 10px 12px; }
+  }
+`;
 
 const gridStyles = `
   .block-grid.grid {
@@ -234,14 +515,7 @@ const gridStyles = `
     font-size: 12px;
   }
 
-  /* Channel color dot */
-  .channel-dot {
-    display: inline-block;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
+  /* Channel badge styles are inline */
 
   /* Grid card */
   .block-card {
@@ -322,12 +596,13 @@ const gridStyles = `
     gap: 2px;
   }
   .block-card-channel {
-    font-size: 10px;
-    color: var(--text-muted);
+    font-size: 9px;
     letter-spacing: 0.2px;
-    display: flex;
-    align-items: center;
-    gap: 5px;
+    border: 1px solid;
+    border-radius: 20px;
+    padding: 2px 8px;
+    width: fit-content;
+    opacity: 0.7;
   }
   .block-card-title {
     font-size: 12px;
@@ -407,11 +682,12 @@ const gridStyles = `
     white-space: nowrap;
   }
   .block-list-channel {
-    font-size: 11px;
-    color: var(--text-muted);
-    display: flex;
-    align-items: center;
-    gap: 4px;
+    font-size: 9px;
+    border: 1px solid;
+    border-radius: 20px;
+    padding: 1px 7px;
+    width: fit-content;
+    opacity: 0.7;
   }
   .block-list-cat {
     font-size: 11px;

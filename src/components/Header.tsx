@@ -255,6 +255,7 @@ export function Header({
         .view-toggle {
           display: flex;
           gap: 4px;
+          flex-shrink: 0;
         }
         .view-btn {
           display: flex;

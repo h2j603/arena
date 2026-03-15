@@ -369,18 +369,24 @@ export function GraphView({ blocks, categoryAssignments, onSelectBlock }: Props)
     panRef.current.active = false;
   }, [onSelectBlock]);
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const sx = e.clientX - rect.left;
-    const sy = e.clientY - rect.top;
-    const t = transformRef.current;
-    const factor = e.deltaY < 0 ? 1.08 : 1 / 1.08;
-    const newK = Math.max(0.15, Math.min(5, t.k * factor));
-    t.x = sx - (sx - t.x) * (newK / t.k);
-    t.y = sy - (sy - t.y) * (newK / t.k);
-    t.k = newK;
+  // Native wheel listener (must be non-passive to preventDefault)
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+      const t = transformRef.current;
+      const factor = e.deltaY < 0 ? 1.08 : 1 / 1.08;
+      const newK = Math.max(0.15, Math.min(5, t.k * factor));
+      t.x = sx - (sx - t.x) * (newK / t.k);
+      t.y = sy - (sy - t.y) * (newK / t.k);
+      t.k = newK;
+    };
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+    return () => canvas.removeEventListener('wheel', onWheel);
   }, []);
 
   if (!blocks.length) {
@@ -398,7 +404,6 @@ export function GraphView({ blocks, categoryAssignments, onSelectBlock }: Props)
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        onWheel={handleWheel}
         style={{ cursor: 'grab', touchAction: 'none' }}
       />
       {tooltip && (

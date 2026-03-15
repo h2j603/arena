@@ -267,6 +267,7 @@ function App() {
             viewMode={viewMode}
             loading={loadingBlocks && blocks.length === 0}
             categoryAssignments={categoryAssignments}
+            categories={categoryNames}
           />
         )}
         {graphSelectedBlock && (
