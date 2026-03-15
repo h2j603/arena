@@ -451,15 +451,37 @@ const gridStyles = `
 
   @media (max-width: 768px) {
     .block-grid.grid {
-      columns: 1;
-      column-gap: 0;
-      padding: 8px 12px;
+      columns: 2;
+      column-gap: 8px;
+      padding: 8px;
     }
     .block-card {
-      margin-bottom: 12px;
+      margin-bottom: 8px;
     }
     .block-card-meta {
-      padding: 8px 10px;
+      padding: 6px 8px;
+    }
+    .block-card-channel {
+      font-size: 9px;
+    }
+    .block-card-title {
+      font-size: 11px;
+      -webkit-line-clamp: 1;
+    }
+    .block-card-text {
+      padding: 10px;
+      font-size: 11px;
+      min-height: 60px;
+    }
+    .block-card-text p {
+      -webkit-line-clamp: 5;
+    }
+    .block-card-link {
+      padding: 16px 10px;
+      min-height: 60px;
+    }
+    .block-card-link-title {
+      font-size: 11px;
     }
     .block-list-item {
       padding: 8px 12px;
