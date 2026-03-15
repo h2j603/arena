@@ -6,7 +6,6 @@ import type { CategoryResult } from './categorize';
 import { Sidebar } from './components/Sidebar';
 import { BlockGrid } from './components/BlockGrid';
 import { Header } from './components/Header';
-import { BlockDetail } from './components/BlockDetail';
 import './App.css';
 
 interface ChannelData {
