@@ -27,7 +27,7 @@ function channelColor(name: string): string {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
   const hue = Math.abs(hash) % 360;
-  return `hsl(${hue}, 72%, 52%)`;
+  return `hsl(${hue}, 55%, 52%)`;
 }
 
 function channelColorRGBA(name: string, alpha: number): string {
@@ -36,7 +36,7 @@ function channelColorRGBA(name: string, alpha: number): string {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
   const hue = Math.abs(hash) % 360;
-  return `hsla(${hue}, 72%, 52%, ${alpha})`;
+  return `hsla(${hue}, 55%, 52%, ${alpha})`;
 }
 
 export function GraphView({ blocks, categoryAssignments, onSelectBlock }: Props) {
@@ -56,11 +56,6 @@ export function GraphView({ blocks, categoryAssignments, onSelectBlock }: Props)
   const rafRef = useRef<number>(0);
   const [tooltip, setTooltip] = useState<{ x: number; y: number; node: GNode } | null>(null);
 
-  const toScreen = useCallback((x: number, y: number) => {
-    const t = transformRef.current;
-    return { x: x * t.k + t.x, y: y * t.k + t.y };
-  }, []);
-
   const toWorld = useCallback((sx: number, sy: number) => {
     const t = transformRef.current;
     return { x: (sx - t.x) / t.k, y: (sy - t.y) / t.k };
@@ -78,7 +73,6 @@ export function GraphView({ blocks, categoryAssignments, onSelectBlock }: Props)
     return null;
   }, [toWorld]);
 
-  // Build graph data
   useEffect(() => {
     if (!blocks.length) return;
 
@@ -91,7 +85,6 @@ export function GraphView({ blocks, categoryAssignments, onSelectBlock }: Props)
         block: item.block,
         channelTitle: item.channelTitle,
       };
-      // Load thumbnail
       if (item.block.image?.thumb?.url) {
         const img = new Image();
         img.crossOrigin = 'anonymous';
@@ -102,7 +95,6 @@ export function GraphView({ blocks, categoryAssignments, onSelectBlock }: Props)
       return n;
     });
 
-    // Build links from shared categories
     const links: GLink[] = [];
     if (categoryAssignments) {
       for (let i = 0; i < nodes.length; i++) {
@@ -117,7 +109,6 @@ export function GraphView({ blocks, categoryAssignments, onSelectBlock }: Props)
         }
       }
     } else {
-      // Without categories, connect blocks from same channel
       const channelMap = new Map<string, GNode[]>();
       for (const n of nodes) {
         const list = channelMap.get(n.channelTitle) || [];
@@ -157,7 +148,6 @@ export function GraphView({ blocks, categoryAssignments, onSelectBlock }: Props)
     };
   }, [blocks, categoryAssignments]);
 
-  // Render loop
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -193,7 +183,6 @@ export function GraphView({ blocks, categoryAssignments, onSelectBlock }: Props)
         ? categoryAssignments[hovered.id] || []
         : [];
 
-      // Draw links
       for (const link of linksRef.current) {
         const s = link.source as GNode;
         const e = link.target as GNode;
@@ -213,7 +202,6 @@ export function GraphView({ blocks, categoryAssignments, onSelectBlock }: Props)
         ctx.stroke();
       }
 
-      // Draw nodes
       const nodeR = 18;
       for (const node of nodesRef.current) {
         if (node.x == null) continue;
@@ -231,15 +219,13 @@ export function GraphView({ blocks, categoryAssignments, onSelectBlock }: Props)
           }
         }
 
-        ctx.globalAlpha = dimmed ? 0.15 : 1;
+        ctx.globalAlpha = dimmed ? 0.12 : 1;
 
-        // Circle bg
         ctx.beginPath();
         ctx.arc(x, y, nodeR, 0, Math.PI * 2);
         ctx.fillStyle = channelColor(node.channelTitle);
         ctx.fill();
 
-        // Image clipped to circle
         if (node.img && node.imgLoaded) {
           ctx.save();
           ctx.beginPath();
@@ -249,25 +235,22 @@ export function GraphView({ blocks, categoryAssignments, onSelectBlock }: Props)
           ctx.restore();
         }
 
-        // Border ring
         ctx.beginPath();
         ctx.arc(x, y, nodeR, 0, Math.PI * 2);
         ctx.strokeStyle = hovered === node
           ? channelColor(node.channelTitle)
-          : channelColorRGBA(node.channelTitle, 0.4);
+          : channelColorRGBA(node.channelTitle, 0.35);
         ctx.lineWidth = hovered === node ? 3 / t.k : 1.5 / t.k;
         ctx.stroke();
 
         ctx.globalAlpha = 1;
       }
 
-      // Category labels for hovered node
       if (hovered && hovered.x != null && hoveredCats.length > 0) {
         const lx = hovered.x;
         const ly = hovered.y! - nodeR - 8;
         ctx.textAlign = 'center';
         ctx.font = `${11 / t.k}px Inter, sans-serif`;
-        ctx.fillStyle = 'rgba(255,255,255,0.9)';
         const label = hoveredCats.join(' · ');
         const metrics = ctx.measureText(label);
         const pad = 4 / t.k;
@@ -288,9 +271,8 @@ export function GraphView({ blocks, categoryAssignments, onSelectBlock }: Props)
       cancelAnimationFrame(rafRef.current);
       window.removeEventListener('resize', resize);
     };
-  }, [categoryAssignments, toScreen]);
+  }, [categoryAssignments]);
 
-  // Mouse events
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -334,7 +316,6 @@ export function GraphView({ blocks, categoryAssignments, onSelectBlock }: Props)
       return;
     }
 
-    // Hover detection
     const node = findNode(sx, sy);
     if (node !== hoveredRef.current) {
       hoveredRef.current = node;
@@ -342,14 +323,11 @@ export function GraphView({ blocks, categoryAssignments, onSelectBlock }: Props)
         canvasRef.current.style.cursor = node ? 'pointer' : 'grab';
       }
       if (node) {
-        const cats = categoryAssignments?.[node.id] || [];
-        const title = node.block.title || node.block.source?.title || node.channelTitle;
         setTooltip({
           x: e.clientX - (rect?.left || 0),
           y: e.clientY - (rect?.top || 0),
           node,
         });
-        void title; void cats;
       } else {
         setTooltip(null);
       }
@@ -367,13 +345,11 @@ export function GraphView({ blocks, categoryAssignments, onSelectBlock }: Props)
       simRef.current?.alphaTarget(0);
       dragRef.current = { node: null, startX: 0, startY: 0, isDragging: false };
     } else if (panRef.current.active && !panRef.current.moved) {
-      // Background click (no drag) — deselect
       onSelectBlock(null as unknown as { block: ArenaBlock; channelTitle: string });
     }
     panRef.current = { active: false, lastX: 0, lastY: 0, moved: false };
   }, [onSelectBlock]);
 
-  // Native wheel listener (must be non-passive to preventDefault)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -413,17 +389,12 @@ export function GraphView({ blocks, categoryAssignments, onSelectBlock }: Props)
       {tooltip && (
         <div
           className="graph-tooltip"
-          style={{ left: tooltip.x, top: tooltip.y - 50 }}
+          style={{ left: tooltip.x, top: tooltip.y - 52 }}
         >
           <span className="graph-tooltip-title">
             {tooltip.node.block.title || tooltip.node.block.source?.title || tooltip.node.channelTitle}
           </span>
-          <span className="graph-tooltip-channel">{tooltip.node.channelTitle}</span>
-        </div>
-      )}
-      {!categoryAssignments && (
-        <div className="graph-hint">
-          Categorize with AI to see content-based connections
+          <span className="graph-tooltip-ch">{tooltip.node.channelTitle}</span>
         </div>
       )}
       <style>{graphStyles}</style>
@@ -456,12 +427,13 @@ const graphStyles = `
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 6px 10px;
+    padding: 6px 12px;
     display: flex;
     flex-direction: column;
     gap: 2px;
-    max-width: 200px;
+    max-width: 220px;
     z-index: 10;
+    box-shadow: var(--shadow-md);
   }
   .graph-tooltip-title {
     font-size: 11px;
@@ -470,21 +442,8 @@ const graphStyles = `
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .graph-tooltip-channel {
+  .graph-tooltip-ch {
     font-size: 10px;
     color: var(--text-muted);
-  }
-  .graph-hint {
-    position: absolute;
-    bottom: 16px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 11px;
-    color: var(--text-muted);
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    padding: 6px 14px;
-    border-radius: 20px;
-    white-space: nowrap;
   }
 `;

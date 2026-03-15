@@ -28,60 +28,62 @@ export function BlockDetail({ block, channelTitle, onClose, categories }: Props)
   });
 
   return (
-    <div className="detail-backdrop" onClick={onClose}>
-      <div className="detail-modal" onClick={(e) => e.stopPropagation()}>
+    <div className="detail-overlay" onClick={onClose}>
+      <div className="detail-panel" onClick={(e) => e.stopPropagation()}>
         <button className="detail-close" onClick={onClose}>
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <path d="M5 5l8 8M13 5l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M4.5 4.5l7 7M11.5 4.5l-7 7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
           </svg>
         </button>
 
-        <div className="detail-content">
+        <div className="detail-body">
           {block.image && (
-            <div className="detail-image">
+            <div className="detail-visual">
               <img src={block.image.original.url} alt={block.title || ''} />
             </div>
           )}
 
           {block.class === 'Text' && block.content_html && (
-            <div
-              className="detail-text-content"
-              dangerouslySetInnerHTML={{ __html: block.content_html }}
-            />
+            <div className={`detail-text-body ${(block.content || '').length < 200 ? 'detail-text-body--short' : ''}`}>
+              {(block.content || '').length < 200 && <span className="detail-text-mark">"</span>}
+              <div dangerouslySetInnerHTML={{ __html: block.content_html }} />
+            </div>
           )}
 
           <div className="detail-meta">
-            <h3 className="detail-title">
+            <h3 className="detail-heading">
               {block.title || block.source?.title || 'Untitled'}
             </h3>
 
-            <div className="detail-info">
-              <div className="detail-info-row">
-                <span className="detail-label">Channel</span>
-                <span>{channelTitle}</span>
+            <dl className="detail-fields">
+              <div className="detail-field">
+                <dt>Channel</dt>
+                <dd>{channelTitle}</dd>
               </div>
-              <div className="detail-info-row">
-                <span className="detail-label">Type</span>
-                <span>{block.class}</span>
+              <div className="detail-field">
+                <dt>Type</dt>
+                <dd>{block.class}</dd>
               </div>
-              <div className="detail-info-row">
-                <span className="detail-label">Date</span>
-                <span>{date}</span>
+              <div className="detail-field">
+                <dt>Date</dt>
+                <dd>{date}</dd>
               </div>
               {block.source?.url && (
-                <div className="detail-info-row">
-                  <span className="detail-label">Source</span>
-                  <a href={block.source.url} target="_blank" rel="noreferrer" className="detail-link">
-                    {new URL(block.source.url).hostname}
-                  </a>
+                <div className="detail-field">
+                  <dt>Source</dt>
+                  <dd>
+                    <a href={block.source.url} target="_blank" rel="noreferrer" className="detail-source-link">
+                      {new URL(block.source.url).hostname}
+                    </a>
+                  </dd>
                 </div>
               )}
-            </div>
+            </dl>
 
             {categories && categories.length > 0 && (
-              <div className="detail-categories">
+              <div className="detail-tags">
                 {categories.map(c => (
-                  <span key={c} className="detail-cat-tag">{c}</span>
+                  <span key={c} className="detail-tag">{c}</span>
                 ))}
               </div>
             )}
@@ -95,7 +97,7 @@ export function BlockDetail({ block, channelTitle, onClose, categories }: Props)
                 href={block.source.url}
                 target="_blank"
                 rel="noreferrer"
-                className="detail-open-btn"
+                className="detail-action"
               >
                 Open Source
               </a>
@@ -104,161 +106,216 @@ export function BlockDetail({ block, channelTitle, onClose, categories }: Props)
         </div>
       </div>
 
-      <style>{`
-        .detail-backdrop {
-          position: fixed;
-          inset: 0;
-          z-index: 200;
-          background: rgba(0,0,0,0.6);
-          backdrop-filter: blur(4px);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 40px;
-          animation: fadeIn 0.2s;
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        .detail-modal {
-          background: var(--bg-card);
-          border-radius: var(--radius-lg);
-          max-width: 800px;
-          max-height: 85vh;
-          width: 100%;
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
-          position: relative;
-          border: 1px solid var(--border);
-        }
-        .detail-close {
-          position: absolute;
-          top: 12px;
-          right: 12px;
-          z-index: 10;
-          padding: 6px;
-          border-radius: 50%;
-          color: var(--text-secondary);
-          background: var(--bg-card);
-          transition: color 0.15s;
-        }
-        .detail-close:hover {
-          color: var(--text);
-        }
-        .detail-content {
-          overflow-y: auto;
-        }
-        .detail-image {
-          background: var(--tag-bg);
-          display: flex;
-          justify-content: center;
-        }
-        .detail-image img {
-          max-width: 100%;
-          max-height: 55vh;
-          object-fit: contain;
-        }
-        .detail-text-content {
-          padding: 24px;
-          font-size: 14px;
-          line-height: 1.7;
-          color: var(--text);
-          max-height: 50vh;
-          overflow-y: auto;
-        }
-        .detail-meta {
-          padding: 20px 24px 24px;
-        }
-        .detail-title {
-          font-family: var(--font-serif);
-          font-size: 26px;
-          font-weight: 300;
-          letter-spacing: -0.5px;
-          margin-bottom: 16px;
-        }
-        .detail-info {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-          margin-bottom: 14px;
-        }
-        .detail-info-row {
-          display: flex;
-          gap: 12px;
-          font-size: 12px;
-        }
-        .detail-label {
-          color: var(--text-muted);
-          width: 60px;
-          flex-shrink: 0;
-          font-size: 10px;
-          text-transform: uppercase;
-          letter-spacing: 0.3px;
-        }
-        .detail-link {
-          color: var(--text-secondary);
-          text-decoration: underline;
-          text-underline-offset: 2px;
-        }
-        .detail-categories {
-          display: flex;
-          gap: 6px;
-          flex-wrap: wrap;
-          margin-bottom: 14px;
-        }
-        .detail-cat-tag {
-          font-family: var(--font-serif);
-          font-size: 13px;
-          font-style: italic;
-          color: var(--text-secondary);
-        }
-        .detail-desc {
-          font-size: 12px;
-          color: var(--text-secondary);
-          line-height: 1.6;
-          margin-bottom: 16px;
-        }
-        .detail-open-btn {
-          display: inline-block;
-          padding: 7px 16px;
-          background: var(--accent);
-          color: var(--bg);
-          border-radius: var(--radius);
-          font-size: 12px;
-          font-weight: 500;
-          transition: opacity 0.2s;
-        }
-        .detail-open-btn:hover {
-          opacity: 0.85;
-        }
-
-        @media (max-width: 768px) {
-          .detail-backdrop {
-            padding: 0;
-            align-items: flex-end;
-          }
-          .detail-modal {
-            max-height: 95vh;
-            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-          }
-          .detail-close {
-            top: 10px;
-            right: 10px;
-            padding: 8px;
-            background: rgba(0,0,0,0.55);
-            color: #fff;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-          }
-          .detail-meta {
-            padding: 16px;
-          }
-          .detail-title {
-            text-align: center;
-          }
-        }
-      `}</style>
+      <style>{detailStyles}</style>
     </div>
   );
 }
+
+const detailStyles = `
+  .detail-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    animation: detailFadeIn 0.2s ease;
+  }
+  @keyframes detailFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .detail-panel {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    max-width: 760px;
+    max-height: 85vh;
+    width: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-lg);
+    animation: detailSlideUp 0.25s ease;
+  }
+  @keyframes detailSlideUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .detail-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    padding: 6px;
+    border-radius: 50%;
+    color: var(--text-secondary);
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+  }
+  .detail-close:hover {
+    color: var(--text);
+    border-color: var(--border);
+  }
+  .detail-body {
+    overflow-y: auto;
+  }
+  .detail-visual {
+    background: var(--tag-bg);
+    display: flex;
+    justify-content: center;
+  }
+  .detail-visual img {
+    max-width: 100%;
+    max-height: 55vh;
+    object-fit: contain;
+  }
+  .detail-text-body {
+    padding: 32px 36px;
+    font-size: 15px;
+    line-height: 1.8;
+    color: var(--text);
+    max-height: 55vh;
+    overflow-y: auto;
+    font-family: var(--font-serif);
+    letter-spacing: -0.1px;
+  }
+  .detail-text-body--short {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 48px 40px 40px;
+    min-height: 200px;
+    justify-content: center;
+    background: var(--accent-soft);
+  }
+  .detail-text-body--short div {
+    font-size: 22px;
+    line-height: 1.5;
+    font-weight: 400;
+  }
+  .detail-text-mark {
+    font-family: var(--font-serif);
+    font-size: 72px;
+    line-height: 0.5;
+    color: var(--text-muted);
+    opacity: 0.2;
+    margin-bottom: 16px;
+    display: block;
+    user-select: none;
+  }
+  .detail-meta {
+    padding: 24px 28px 28px;
+  }
+  .detail-heading {
+    font-family: var(--font-serif);
+    font-size: 24px;
+    font-weight: 400;
+    letter-spacing: -0.3px;
+    margin-bottom: 18px;
+    line-height: 1.3;
+  }
+  .detail-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+  .detail-field {
+    display: flex;
+    gap: 14px;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .detail-field dt {
+    color: var(--text-muted);
+    width: 56px;
+    flex-shrink: 0;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding-top: 1px;
+  }
+  .detail-field dd { color: var(--text-secondary); }
+  .detail-source-link {
+    color: var(--text-secondary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-color: var(--border);
+    transition: text-decoration-color var(--transition-fast);
+  }
+  .detail-source-link:hover {
+    text-decoration-color: var(--text-secondary);
+  }
+  .detail-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .detail-tag {
+    font-family: var(--font-serif);
+    font-size: 12px;
+    font-style: italic;
+    color: var(--text-muted);
+    padding: 2px 10px;
+    background: var(--accent-soft);
+    border-radius: 20px;
+  }
+  .detail-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.65;
+    margin-bottom: 18px;
+  }
+  .detail-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 18px;
+    background: var(--accent);
+    color: var(--bg);
+    border-radius: var(--radius);
+    font-size: 12px;
+    font-weight: 500;
+    transition: opacity var(--transition);
+    letter-spacing: 0.1px;
+  }
+  .detail-action:hover { opacity: 0.85; }
+
+  @media (max-width: 768px) {
+    .detail-overlay {
+      padding: 0;
+      align-items: flex-end;
+    }
+    .detail-panel {
+      max-height: 92vh;
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      animation: detailSlideUpMobile 0.3s ease;
+    }
+    @keyframes detailSlideUpMobile {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .detail-close {
+      top: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.5);
+      color: #fff;
+      border: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    }
+    .detail-close:hover { color: #fff; }
+    .detail-meta { padding: 18px 20px 24px; }
+    .detail-heading { font-size: 20px; }
+    .detail-text-body { padding: 20px; }
+  }
+`;

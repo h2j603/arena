@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { getSlug, getUserChannels, getChannelContents } from './api';
-import { categorizeBlocks, clearCategoryCache } from './categorize';
+import { categorizeBlocks, clearCategoryCache, getCachedCategories } from './categorize';
 import type { ArenaChannel, ArenaBlock, ViewMode } from './types';
 import type { CategoryResult } from './categorize';
 import { Sidebar } from './components/Sidebar';
@@ -39,17 +39,16 @@ function App() {
   const [blockTypeFilter, setBlockTypeFilter] = useState<string>('all');
   const [error, setError] = useState<string | null>(null);
   const [hiddenChannels, setHiddenChannels] = useState<Set<string>>(getHiddenChannels);
-  const [categoryResult, setCategoryResult] = useState<CategoryResult | null>(null);
+  const [categoryResult, setCategoryResult] = useState<CategoryResult | null>(getCachedCategories);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isCategorizing, setIsCategorizing] = useState(false);
   const [categorizeError, setCategorizeError] = useState<string | null>(null);
 
-  // Ref to avoid stale closure in loadChannel
   const channelDataRef = useRef(channelData);
   channelDataRef.current = channelData;
 
-  // Track in-flight channel loads to prevent duplicates
   const loadingChannelsRef = useRef(new Set<string>());
+  const autoCurateTriggered = useRef(false);
 
   const loadChannels = useCallback(async (slug: string) => {
     try {
@@ -69,7 +68,6 @@ function App() {
     if (username) loadChannels(username);
   }, [username, loadChannels]);
 
-  // Stable loadChannel - no dependency on channelData state
   const loadChannel = useCallback(async (slug: string) => {
     if (channelDataRef.current.has(slug)) return;
     if (loadingChannelsRef.current.has(slug)) return;
@@ -104,7 +102,6 @@ function App() {
     });
   }, []);
 
-  // Memoized block list - avoids recomputation on unrelated state changes
   const blocks = useMemo(() => {
     const results: { block: ArenaBlock; channelTitle: string }[] = [];
 
@@ -163,6 +160,40 @@ function App() {
     }
   }, [channels, channelData.size]);
 
+  // Auto-curate: trigger categorization automatically once blocks are loaded and no cache exists
+  useEffect(() => {
+    if (autoCurateTriggered.current) return;
+    if (categoryResult) return; // already have categories (from cache or previous run)
+    if (channelData.size < 2) return; // wait for at least 2 channels
+
+    autoCurateTriggered.current = true;
+
+    const allBlocks: { id: number; title: string | null; type: string; description: string | null; channelTitle: string }[] = [];
+    channelData.forEach((data) => {
+      data.blocks.forEach((b) => {
+        allBlocks.push({
+          id: b.id,
+          title: b.title,
+          type: b.class,
+          description: b.description,
+          channelTitle: data.channel.title,
+        });
+      });
+    });
+
+    if (allBlocks.length === 0) return;
+
+    setIsCategorizing(true);
+    setCategorizeError(null);
+    categorizeBlocks(allBlocks)
+      .then((result) => setCategoryResult(result))
+      .catch((e) => {
+        const msg = e instanceof Error ? e.message : 'Unknown error';
+        setCategorizeError(msg);
+      })
+      .finally(() => setIsCategorizing(false));
+  }, [channelData, categoryResult]);
+
   const handleCategorize = useCallback(async () => {
     setIsCategorizing(true);
     setCategorizeError(null);
@@ -179,7 +210,7 @@ function App() {
           });
         });
       });
-      const result = await categorizeBlocks(allBlocks);
+      const result = await categorizeBlocks(allBlocks, false);
       setCategoryResult(result);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Unknown error';
@@ -193,15 +224,13 @@ function App() {
     clearCategoryCache();
     setCategoryResult(null);
     setSelectedCategory(null);
+    autoCurateTriggered.current = false;
   }, []);
 
-  // Memoize loadedChannels set to avoid new object every render
   const loadedChannels = useMemo(() => new Set(channelData.keys()), [channelData]);
 
-  // Graph detail modal state
   const [graphSelectedBlock, setGraphSelectedBlock] = useState<{ block: ArenaBlock; channelTitle: string } | null>(null);
 
-  // Memoize category assignments
   const categoryAssignments = categoryResult?.assignments || null;
   const categoryNames = categoryResult?.categories || null;
 

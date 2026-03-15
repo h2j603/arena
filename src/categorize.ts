@@ -13,7 +13,7 @@ export interface CategoryResult {
 
 const CACHE_KEY = 'arena_categories';
 
-function getCachedCategories(): CategoryResult | null {
+export function getCachedCategories(): CategoryResult | null {
   try {
     const raw = localStorage.getItem(CACHE_KEY);
     if (raw) return JSON.parse(raw);

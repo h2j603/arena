@@ -15,16 +15,32 @@ function channelColor(name: string): string {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
   const hue = Math.abs(hash) % 360;
-  return `hsl(${hue}, 72%, 48%)`;
+  return `hsl(${hue}, 55%, 52%)`;
 }
 
 function getDisplayTitle(block: ArenaBlock): string | null {
   switch (block.class) {
     case 'Image': return null;
-    case 'Text': return block.content?.slice(0, 120)?.replace(/\n/g, ' ') || null;
+    case 'Text': return null; // text blocks show content as their visual — no separate title needed
     case 'Link': return block.source?.title || block.title || null;
     default: return block.title || null;
   }
+}
+
+function getTextLength(block: ArenaBlock): 'short' | 'medium' | 'long' {
+  const len = (block.content || '').length;
+  if (len < 100) return 'short';
+  if (len < 280) return 'medium';
+  return 'long';
+}
+
+function channelColorSoft(name: string, alpha: number): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue = Math.abs(hash) % 360;
+  return `hsla(${hue}, 40%, 50%, ${alpha})`;
 }
 
 export function BlockGrid({ blocks, loading, categoryAssignments, categories }: Props) {
@@ -59,7 +75,7 @@ export function BlockGrid({ blocks, loading, categoryAssignments, categories }: 
   if (blocks.length === 0) {
     return (
       <div className="grid-empty">
-        <p>No references found</p>
+        <p className="grid-empty-title">No references found</p>
         <p className="grid-empty-sub">Select a channel from the sidebar to explore</p>
       </div>
     );
@@ -69,22 +85,25 @@ export function BlockGrid({ blocks, loading, categoryAssignments, categories }: 
   if (groupedBlocks) {
     return (
       <>
-        <div className="curated-nav">
+        <div className="curated-toc">
           {[...groupedBlocks.keys()].map((cat) => (
-            <button key={cat} className="curated-nav-item" onClick={() => scrollToSection(cat)}>
-              {cat}
-              <span className="curated-nav-count">{groupedBlocks.get(cat)?.length}</span>
+            <button key={cat} className="curated-toc-item" onClick={() => scrollToSection(cat)}>
+              <span className="curated-toc-name">{cat}</span>
+              <span className="curated-toc-count">{groupedBlocks.get(cat)?.length}</span>
             </button>
           ))}
         </div>
-        <div className="curated-view">
+        <div className="curated-sections">
           {[...groupedBlocks.entries()].map(([cat, items]) => (
             <section
               key={cat}
               className="curated-section"
               ref={(el) => { if (el) sectionRefs.current.set(cat, el); }}
             >
-              <h2 className="curated-section-title">{cat}</h2>
+              <div className="curated-section-header">
+                <h2 className="curated-section-title">{cat}</h2>
+                <span className="curated-section-count">{items.length} items</span>
+              </div>
               <div className="curated-grid">
                 {items.map((item) => (
                   <BlockCard
@@ -165,43 +184,64 @@ const BlockCard = memo(function BlockCard({
       );
     }
     if (block.class === 'Text') {
+      const textLen = getTextLength(block);
+      const bgTint = channelColorSoft(channelTitle, 0.06);
+      const accentLine = channelColorSoft(channelTitle, 0.25);
+
+      if (textLen === 'short') {
+        return (
+          <div className="card-text card-text--short" style={{ background: bgTint }}>
+            <span className="card-text-quote">"</span>
+            <p>{block.content}</p>
+          </div>
+        );
+      }
+      if (textLen === 'medium') {
+        return (
+          <div className="card-text card-text--medium" style={{ borderLeftColor: accentLine, background: bgTint }}>
+            <p>{block.content?.slice(0, 280)}</p>
+          </div>
+        );
+      }
       return (
-        <div className="block-card-text" style={{ borderLeftColor: color }}>
-          <p>{block.content?.slice(0, 300)}</p>
+        <div className="card-text card-text--long" style={{ borderLeftColor: accentLine }}>
+          <p>{block.content?.slice(0, 400)}</p>
+          <div className="card-text-fade" />
         </div>
       );
     }
     if (block.class === 'Link') {
       return (
-        <div className="block-card-link" style={{ borderLeftColor: color }}>
-          <span className="block-card-link-title">{block.source?.title || block.title || 'Link'}</span>
+        <div className="card-link" style={{ borderLeftColor: color }}>
+          <span className="card-link-title">{block.source?.title || block.title || 'Link'}</span>
           {block.source?.url && (
-            <span className="block-card-link-host">{new URL(block.source.url).hostname}</span>
+            <span className="card-link-domain">{new URL(block.source.url).hostname}</span>
           )}
         </div>
       );
     }
-    return <div className="block-card-fallback" style={{ borderColor: color }}><span>{block.class}</span></div>;
+    return <div className="card-fallback"><span>{block.class}</span></div>;
   };
 
   return (
     <div className="block-card" onClick={onClick}>
-      <div className="block-card-visual">{renderVisual()}</div>
-      <div className="block-card-meta">
-        <span className="block-card-channel" style={{ borderColor: color, color }}>
+      <div className="card-visual">{renderVisual()}</div>
+      <div className="card-info">
+        <span className="card-channel" style={{ color }}>
           {channelTitle}
         </span>
-        {displayTitle && <span className="block-card-title">{displayTitle}</span>}
+        {displayTitle && <span className="card-title">{displayTitle}</span>}
       </div>
     </div>
   );
 });
 
 const gridStyles = `
+  /* Masonry grid */
   .block-grid {
-    columns: 260px;
-    column-gap: 16px;
-    padding: 20px 24px;
+    columns: 280px;
+    column-gap: 18px;
+    padding: 22px 28px 60px;
   }
 
   .grid-loading, .grid-empty {
@@ -209,72 +249,146 @@ const gridStyles = `
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 100px 20px;
+    padding: 120px 20px;
     color: var(--text-muted);
-    font-size: 13px;
-    gap: 10px;
+    gap: 8px;
     text-align: center;
   }
-  .grid-empty p {
+  .grid-empty-title {
     font-family: var(--font-serif);
     font-size: 18px;
     color: var(--text-secondary);
+    font-weight: 400;
   }
-  .grid-empty-sub { font-size: 12px; font-family: var(--font-sans); }
+  .grid-empty-sub { font-size: 12px; }
 
-  /* Grid card */
+  /* Card */
   .block-card {
     break-inside: avoid;
-    margin-bottom: 20px;
+    margin-bottom: 18px;
     display: inline-block;
     width: 100%;
     cursor: pointer;
     overflow: hidden;
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    transition: border-color var(--transition), box-shadow var(--transition);
   }
-  .block-card-visual {
+  .block-card:hover {
+    border-color: var(--border);
+    box-shadow: var(--shadow-md);
+  }
+
+  .card-visual {
     position: relative;
     width: 100%;
     overflow: hidden;
   }
-  .block-card-visual img {
+  .card-visual img {
     width: 100%;
     height: auto;
     display: block;
-    transition: opacity 0.3s ease;
+    transition: opacity var(--transition-slow);
   }
-  .block-card-text {
-    padding: 14px 16px;
-    font-size: 12px;
-    line-height: 1.7;
-    color: var(--text-secondary);
-    border-left: 2.5px solid transparent;
+  /* Text blocks — typographic treatment */
+  .card-text {
+    position: relative;
+    overflow: hidden;
   }
-  .block-card-text p {
+  .card-text p {
     display: -webkit-box;
-    -webkit-line-clamp: 8;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  .block-card-link {
+
+  /* Short text: pull-quote style — large serif, centered, dramatic */
+  .card-text--short {
+    padding: 32px 24px 28px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 120px;
+    justify-content: center;
+  }
+  .card-text--short p {
+    font-family: var(--font-serif);
+    font-size: 20px;
+    font-weight: 400;
+    line-height: 1.45;
+    color: var(--text);
+    letter-spacing: -0.2px;
+    -webkit-line-clamp: 5;
+  }
+  .card-text-quote {
+    font-family: var(--font-serif);
+    font-size: 52px;
+    line-height: 0.6;
+    color: var(--text-muted);
+    opacity: 0.3;
+    margin-bottom: 8px;
+    display: block;
+    user-select: none;
+  }
+
+  /* Medium text: editorial excerpt — serif, left-bordered, warm bg */
+  .card-text--medium {
+    padding: 22px 20px;
+    border-left: 3px solid transparent;
+  }
+  .card-text--medium p {
+    font-family: var(--font-serif);
+    font-size: 15px;
+    font-weight: 400;
+    line-height: 1.6;
+    color: var(--text);
+    letter-spacing: -0.1px;
+    -webkit-line-clamp: 10;
+  }
+
+  /* Long text: reader-friendly with fade */
+  .card-text--long {
+    padding: 18px 20px 0;
+    border-left: 3px solid transparent;
+    max-height: 260px;
+  }
+  .card-text--long p {
+    font-size: 12.5px;
+    line-height: 1.75;
+    color: var(--text-secondary);
+    -webkit-line-clamp: 12;
+  }
+  .card-text-fade {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 48px;
+    background: linear-gradient(transparent, var(--bg-card));
+    pointer-events: none;
+  }
+  .card-link {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    padding: 20px 16px;
+    padding: 20px 18px;
     border-left: 2.5px solid transparent;
   }
-  .block-card-link-title {
+  .card-link-title {
     font-family: var(--font-serif);
     font-size: 15px;
     font-weight: 400;
     color: var(--text);
-    line-height: 1.3;
+    line-height: 1.35;
     word-break: break-word;
   }
-  .block-card-link-host {
+  .card-link-domain {
     font-size: 10px;
     color: var(--text-muted);
+    letter-spacing: 0.2px;
   }
-  .block-card-fallback {
+  .card-fallback {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -282,27 +396,24 @@ const gridStyles = `
     font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 1px;
-    padding: 24px;
-    min-height: 60px;
-    border: 1px solid var(--border);
+    padding: 28px;
+    min-height: 64px;
   }
 
-  /* Card meta */
-  .block-card-meta {
-    padding: 6px 0;
+  /* Card info */
+  .card-info {
+    padding: 10px 14px 12px;
     display: flex;
     flex-direction: column;
     gap: 3px;
+    border-top: 1px solid var(--border-light);
   }
-  .block-card-channel {
+  .card-channel {
     font-size: 10px;
     font-weight: 500;
-    border: 1.5px solid;
-    border-radius: 3px;
-    padding: 1px 6px;
-    width: fit-content;
+    letter-spacing: 0.2px;
   }
-  .block-card-title {
+  .card-title {
     font-size: 12px;
     color: var(--text-secondary);
     line-height: 1.4;
@@ -312,54 +423,77 @@ const gridStyles = `
     overflow: hidden;
   }
 
-  /* Curated nav */
-  .curated-nav {
+  /* Curated table of contents */
+  .curated-toc {
     display: flex;
-    gap: 20px;
-    padding: 12px 24px;
+    gap: 6px;
+    padding: 14px 28px;
     overflow-x: auto;
     scrollbar-width: none;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--border-light);
     background: var(--bg);
     position: sticky;
-    top: 52px;
+    top: 88px;
     z-index: 40;
   }
-  .curated-nav::-webkit-scrollbar { display: none; }
-  .curated-nav-item {
-    font-size: 12px;
+  .curated-toc::-webkit-scrollbar { display: none; }
+  .curated-toc-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
     color: var(--text-muted);
     white-space: nowrap;
-    display: flex;
-    align-items: baseline;
-    gap: 4px;
-    transition: color 0.15s;
+    padding: 4px 10px;
+    border-radius: var(--radius);
+    transition: all var(--transition-fast);
+    background: var(--accent-soft);
   }
-  .curated-nav-item:hover { color: var(--text); }
-  .curated-nav-count {
+  .curated-toc-item:hover {
+    color: var(--text);
+    background: var(--tag-bg);
+  }
+  .curated-toc-count {
     font-size: 9px;
-    opacity: 0.5;
+    opacity: 0.6;
+    font-variant-numeric: tabular-nums;
+  }
+  .curated-toc-name {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 12px;
   }
 
   /* Curated sections */
-  .curated-view {
-    padding: 0 24px 80px;
+  .curated-sections {
+    padding: 0 28px 80px;
   }
   .curated-section {
-    padding-top: 48px;
+    padding-top: 40px;
+  }
+  .curated-section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-light);
   }
   .curated-section-title {
     font-family: var(--font-serif);
-    font-size: 38px;
+    font-size: 28px;
     font-weight: 300;
     font-style: italic;
-    letter-spacing: -0.5px;
+    letter-spacing: -0.3px;
     color: var(--text);
-    margin-bottom: 24px;
+  }
+  .curated-section-count {
+    font-size: 11px;
+    color: var(--text-muted);
   }
   .curated-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 16px;
   }
   .curated-grid .block-card {
@@ -368,42 +502,53 @@ const gridStyles = `
     display: flex;
     flex-direction: column;
   }
-  .curated-grid .block-card-visual img {
+  .curated-grid .card-visual img {
     width: 100%;
     aspect-ratio: 4/3;
     object-fit: cover;
-  }
-  .curated-grid .block-card-meta {
-    padding: 6px 0;
   }
 
   @media (max-width: 768px) {
     .block-grid {
       columns: 2;
       column-gap: 10px;
-      padding: 10px;
+      padding: 12px;
     }
-    .block-card { margin-bottom: 14px; }
-    .block-card-meta { padding: 4px 0; text-align: center; align-items: center; }
-    .block-card-channel { font-size: 9px; }
-    .block-card-title { font-size: 11px; -webkit-line-clamp: 1; }
-    .block-card-text { padding: 8px 0; font-size: 11px; }
-    .block-card-link { padding: 12px 0; text-align: center; align-items: center; }
-    .block-card-link-title { font-size: 14px; }
-
-    .curated-view { padding: 0 16px 60px; }
-    .curated-section { padding-top: 36px; }
-    .curated-section-title {
-      font-size: 28px;
-      margin-bottom: 16px;
+    .block-card {
+      margin-bottom: 10px;
+      border-radius: var(--radius);
+    }
+    .card-info {
+      padding: 8px 10px 10px;
+      align-items: center;
       text-align: center;
     }
-    .curated-grid .block-card-meta { text-align: center; align-items: center; }
+    .card-channel { font-size: 9px; }
+    .card-title { font-size: 11px; -webkit-line-clamp: 1; }
+    .card-text--short { padding: 20px 16px 18px; min-height: 90px; }
+    .card-text--short p { font-size: 16px; }
+    .card-text-quote { font-size: 38px; margin-bottom: 4px; }
+    .card-text--medium { padding: 16px 14px; }
+    .card-text--medium p { font-size: 13px; }
+    .card-text--long { padding: 14px 14px 0; max-height: 180px; }
+    .card-text--long p { font-size: 11px; }
+    .card-link { padding: 14px 12px; }
+    .card-link-title { font-size: 14px; }
+
+    .curated-sections { padding: 0 12px 60px; }
+    .curated-section { padding-top: 32px; }
+    .curated-section-header { margin-bottom: 14px; }
+    .curated-section-title { font-size: 22px; }
     .curated-grid {
       grid-template-columns: repeat(2, 1fr);
       gap: 10px;
     }
-    .curated-grid .block-card-visual img { aspect-ratio: 1/1; }
-    .curated-nav { padding: 10px 16px; gap: 16px; justify-content: center; }
+    .curated-grid .card-visual img { aspect-ratio: 1/1; }
+    .curated-grid .card-info { text-align: center; align-items: center; }
+    .curated-toc {
+      padding: 10px 12px;
+      gap: 4px;
+      top: 82px;
+    }
   }
 `;
