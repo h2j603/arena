@@ -1,14 +1,25 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { ArenaBlock } from '../types';
+import { findRelated } from '../recommend';
+
+interface BlockItem {
+  block: ArenaBlock;
+  channelTitle: string;
+}
 
 interface Props {
   block: ArenaBlock;
   channelTitle: string;
+  allBlocks: BlockItem[];
   onClose: () => void;
-  categories: string[] | null;
+  onSelectBlock: (item: BlockItem) => void;
 }
 
-export function BlockDetail({ block, channelTitle, onClose, categories }: Props) {
+export function BlockDetail({ block, channelTitle, allBlocks, onClose, onSelectBlock }: Props) {
+  const [related, setRelated] = useState<BlockItem[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string | null>(null);
+  const [loadingRelated, setLoadingRelated] = useState(false);
+
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -21,11 +32,30 @@ export function BlockDetail({ block, channelTitle, onClose, categories }: Props)
     };
   }, [onClose]);
 
+  useEffect(() => {
+    setLoadingRelated(true);
+    setRelated([]);
+    setSearchQuery(null);
+    findRelated({ block, channelTitle }, allBlocks)
+      .then((result) => {
+        setRelated(result.related);
+        setSearchQuery(result.searchQuery);
+      })
+      .catch(() => {
+        // silently fail
+      })
+      .finally(() => setLoadingRelated(false));
+  }, [block.id, channelTitle, allBlocks]);
+
   const date = new Date(block.connected_at || block.created_at).toLocaleDateString('ko-KR', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   });
+
+  const handleRelatedClick = (item: BlockItem) => {
+    onSelectBlock(item);
+  };
 
   return (
     <div className="detail-overlay" onClick={onClose}>
@@ -45,7 +75,7 @@ export function BlockDetail({ block, channelTitle, onClose, categories }: Props)
 
           {block.class === 'Text' && block.content_html && (
             <div className={`detail-text-body ${(block.content || '').length < 200 ? 'detail-text-body--short' : ''}`}>
-              {(block.content || '').length < 200 && <span className="detail-text-mark">"</span>}
+              {(block.content || '').length < 200 && <span className="detail-text-mark">&ldquo;</span>}
               <div dangerouslySetInnerHTML={{ __html: block.content_html }} />
             </div>
           )}
@@ -80,27 +110,78 @@ export function BlockDetail({ block, channelTitle, onClose, categories }: Props)
               )}
             </dl>
 
-            {categories && categories.length > 0 && (
-              <div className="detail-tags">
-                {categories.map(c => (
-                  <span key={c} className="detail-tag">{c}</span>
-                ))}
-              </div>
-            )}
-
             {block.description && (
               <p className="detail-desc">{block.description}</p>
             )}
 
-            {block.source?.url && (
-              <a
-                href={block.source.url}
-                target="_blank"
-                rel="noreferrer"
-                className="detail-action"
-              >
-                Visit Source
-              </a>
+            <div className="detail-actions-row">
+              {block.source?.url && (
+                <a
+                  href={block.source.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="detail-action"
+                >
+                  Visit Source
+                </a>
+              )}
+              {searchQuery && (
+                <a
+                  href={`https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="detail-action detail-action--secondary"
+                >
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <circle cx="5" cy="5" r="3.5" stroke="currentColor" strokeWidth="1.2"/>
+                    <path d="M7.5 7.5L10.5 10.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                  </svg>
+                  Find Similar
+                </a>
+              )}
+            </div>
+          </div>
+
+          {/* Related works section */}
+          <div className="detail-related">
+            <h4 className="detail-related-title">Related in your archive</h4>
+            {loadingRelated && (
+              <div className="detail-related-loading">
+                <div className="loading-spinner" />
+              </div>
+            )}
+            {!loadingRelated && related.length > 0 && (
+              <div className="detail-related-grid">
+                {related.map((item) => (
+                  <div
+                    key={item.block.id}
+                    className="detail-related-item"
+                    onClick={() => handleRelatedClick(item)}
+                  >
+                    {item.block.image ? (
+                      <img
+                        src={item.block.image.thumb.url}
+                        alt=""
+                        className="detail-related-img"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="detail-related-placeholder">
+                        <span className="detail-related-placeholder-type">{item.block.class}</span>
+                        <span className="detail-related-placeholder-title">
+                          {(item.block.title || item.block.content || 'Untitled').slice(0, 60)}
+                        </span>
+                      </div>
+                    )}
+                    <span className="detail-related-label">
+                      {item.block.title || item.channelTitle}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {!loadingRelated && related.length === 0 && (
+              <p className="detail-related-empty">No related works found</p>
             )}
           </div>
         </div>
@@ -213,7 +294,7 @@ const detailStyles = `
     user-select: none;
   }
   .detail-meta {
-    padding: 24px 28px 28px;
+    padding: 24px 28px 20px;
   }
   .detail-heading {
     font-family: var(--font-serif);
@@ -255,25 +336,16 @@ const detailStyles = `
   .detail-source-link:hover {
     text-decoration-color: var(--text-secondary);
   }
-  .detail-tags {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    margin-bottom: 16px;
-  }
-  .detail-tag {
-    font-family: var(--font-serif);
-    font-size: 14px;
-    color: var(--text-muted);
-    padding: 3px 12px;
-    background: var(--accent-soft);
-    border-radius: 20px;
-  }
   .detail-desc {
     font-size: 12px;
     color: var(--text-secondary);
     line-height: 1.65;
     margin-bottom: 18px;
+  }
+  .detail-actions-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
   }
   .detail-action {
     display: inline-flex;
@@ -289,6 +361,99 @@ const detailStyles = `
     letter-spacing: 0.1px;
   }
   .detail-action:hover { opacity: 0.85; }
+  .detail-action--secondary {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+  }
+  .detail-action--secondary:hover {
+    border-color: var(--text-muted);
+    color: var(--text);
+    opacity: 1;
+  }
+
+  /* Related works */
+  .detail-related {
+    border-top: 1px solid var(--border-light);
+    padding: 20px 28px 28px;
+  }
+  .detail-related-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+  }
+  .detail-related-loading {
+    display: flex;
+    justify-content: center;
+    padding: 24px 0;
+  }
+  .detail-related-empty {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-align: center;
+    padding: 16px 0;
+  }
+  .detail-related-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  .detail-related-item {
+    cursor: pointer;
+    border-radius: 4px;
+    overflow: hidden;
+    transition: opacity var(--transition-fast);
+  }
+  .detail-related-item:hover {
+    opacity: 0.8;
+  }
+  .detail-related-img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    display: block;
+    border-radius: 3px;
+    background: var(--border-light);
+  }
+  .detail-related-placeholder {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    gap: 6px;
+    text-align: center;
+  }
+  .detail-related-placeholder-type {
+    font-size: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+  }
+  .detail-related-placeholder-title {
+    font-size: 10px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+  }
+  .detail-related-label {
+    display: block;
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
   @media (max-width: 768px) {
     .detail-overlay {
@@ -313,8 +478,10 @@ const detailStyles = `
       box-shadow: 0 2px 8px rgba(0,0,0,0.25);
     }
     .detail-close:hover { color: #fff; }
-    .detail-meta { padding: 18px 20px 24px; }
+    .detail-meta { padding: 18px 20px 16px; }
     .detail-heading { font-size: 24px; }
     .detail-text-body { padding: 20px; }
+    .detail-related { padding: 16px 20px 24px; }
+    .detail-related-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
   }
 `;

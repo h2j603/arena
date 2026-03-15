@@ -4,11 +4,11 @@ import { BlockDetail } from './BlockDetail';
 
 interface Props {
   blocks: { block: ArenaBlock; channelTitle: string }[];
+  allBlocks: { block: ArenaBlock; channelTitle: string }[];
   loading: boolean;
-  categoryAssignments: Record<string, string[]> | null;
 }
 
-export function BlockGrid({ blocks, loading, categoryAssignments }: Props) {
+export function BlockGrid({ blocks, allBlocks, loading }: Props) {
   const [selectedBlock, setSelectedBlock] = useState<{ block: ArenaBlock; channelTitle: string } | null>(null);
 
   if (loading) {
@@ -41,8 +41,9 @@ export function BlockGrid({ blocks, loading, categoryAssignments }: Props) {
         <BlockDetail
           block={selectedBlock.block}
           channelTitle={selectedBlock.channelTitle}
+          allBlocks={allBlocks}
           onClose={() => setSelectedBlock(null)}
-          categories={categoryAssignments?.[String(selectedBlock.block.id)] || null}
+          onSelectBlock={(item) => setSelectedBlock(item)}
         />
       )}
       <style>{gridStyles}</style>
