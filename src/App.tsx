@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { getSlug, getUserChannels, getChannelContents } from './api';
-import { categorizeBlocks, clearCategoryCache, getCachedCategories } from './categorize';
 import type { ArenaChannel, ArenaBlock } from './types';
-import type { CategoryResult } from './categorize';
 import { Sidebar } from './components/Sidebar';
 import { BlockGrid } from './components/BlockGrid';
 import { Header } from './components/Header';
@@ -36,16 +34,11 @@ function App() {
   const [blockTypeFilter, setBlockTypeFilter] = useState<string>('all');
   const [error, setError] = useState<string | null>(null);
   const [hiddenChannels, setHiddenChannels] = useState<Set<string>>(getHiddenChannels);
-  const [categoryResult, setCategoryResult] = useState<CategoryResult | null>(getCachedCategories);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [isCategorizing, setIsCategorizing] = useState(false);
-  const [categorizeError, setCategorizeError] = useState<string | null>(null);
 
   const channelDataRef = useRef(channelData);
   channelDataRef.current = channelData;
 
   const loadingChannelsRef = useRef(new Set<string>());
-  const autoCurateTriggered = useRef(false);
 
   const loadChannels = useCallback(async (slug: string) => {
     try {
@@ -99,36 +92,43 @@ function App() {
     });
   }, []);
 
-  const blocks = useMemo(() => {
+  // All blocks, deduplicated
+  const allBlocks = useMemo(() => {
     const results: { block: ArenaBlock; channelTitle: string }[] = [];
-
-    if (selectedChannel) {
-      const data = channelData.get(selectedChannel);
-      if (data) {
-        data.blocks.forEach((b) => results.push({ block: b, channelTitle: data.channel.title }));
-      }
-    } else {
-      channelData.forEach((data, slug) => {
-        if (hiddenChannels.has(slug)) return;
-        data.blocks.forEach((b) => results.push({ block: b, channelTitle: data.channel.title }));
-      });
-    }
-
-    // Deduplicate blocks that appear in multiple channels (keep first occurrence)
+    channelData.forEach((data, slug) => {
+      if (hiddenChannels.has(slug)) return;
+      data.blocks.forEach((b) => results.push({ block: b, channelTitle: data.channel.title }));
+    });
     const seen = new Set<number>();
-    const deduped = results.filter((item) => {
+    return results.filter((item) => {
       if (seen.has(item.block.id)) return false;
       seen.add(item.block.id);
       return true;
     });
+  }, [channelData, hiddenChannels]);
 
-    return deduped
+  const blocks = useMemo(() => {
+    let source = allBlocks;
+
+    if (selectedChannel) {
+      const data = channelData.get(selectedChannel);
+      if (data) {
+        const seen = new Set<number>();
+        source = data.blocks
+          .map((b) => ({ block: b, channelTitle: data.channel.title }))
+          .filter((item) => {
+            if (seen.has(item.block.id)) return false;
+            seen.add(item.block.id);
+            return true;
+          });
+      } else {
+        source = [];
+      }
+    }
+
+    return source
       .filter((item) => {
         if (blockTypeFilter !== 'all' && item.block.class.toLowerCase() !== blockTypeFilter) return false;
-        if (selectedCategory && categoryResult) {
-          const assigned = categoryResult.assignments[String(item.block.id)];
-          if (!assigned || !assigned.includes(selectedCategory)) return false;
-        }
         if (searchQuery) {
           const q = searchQuery.toLowerCase();
           const title = (item.block.title || '').toLowerCase();
@@ -143,7 +143,7 @@ function App() {
         new Date(b.block.connected_at || b.block.created_at).getTime() -
         new Date(a.block.connected_at || a.block.created_at).getTime()
       );
-  }, [selectedChannel, channelData, hiddenChannels, blockTypeFilter, selectedCategory, categoryResult, searchQuery]);
+  }, [selectedChannel, channelData, allBlocks, blockTypeFilter, searchQuery]);
 
   // Batch-load first channels in parallel on initial load
   useEffect(() => {
@@ -165,77 +165,7 @@ function App() {
     }
   }, [channels, channelData.size]);
 
-  // Auto-curate: trigger categorization automatically once blocks are loaded and no cache exists
-  useEffect(() => {
-    if (autoCurateTriggered.current) return;
-    if (categoryResult) return; // already have categories (from cache or previous run)
-    if (channelData.size < 2) return; // wait for at least 2 channels
-
-    autoCurateTriggered.current = true;
-
-    const allBlocks: { id: number; title: string | null; type: string; description: string | null; channelTitle: string }[] = [];
-    channelData.forEach((data) => {
-      data.blocks.forEach((b) => {
-        allBlocks.push({
-          id: b.id,
-          title: b.title,
-          type: b.class,
-          description: b.description,
-          channelTitle: data.channel.title,
-        });
-      });
-    });
-
-    if (allBlocks.length === 0) return;
-
-    setIsCategorizing(true);
-    setCategorizeError(null);
-    categorizeBlocks(allBlocks)
-      .then((result) => setCategoryResult(result))
-      .catch((e) => {
-        const msg = e instanceof Error ? e.message : 'Unknown error';
-        setCategorizeError(msg);
-      })
-      .finally(() => setIsCategorizing(false));
-  }, [channelData, categoryResult]);
-
-  const handleCategorize = useCallback(async () => {
-    setIsCategorizing(true);
-    setCategorizeError(null);
-    try {
-      const allBlocks: { id: number; title: string | null; type: string; description: string | null; channelTitle: string }[] = [];
-      channelDataRef.current.forEach((data) => {
-        data.blocks.forEach((b) => {
-          allBlocks.push({
-            id: b.id,
-            title: b.title,
-            type: b.class,
-            description: b.description,
-            channelTitle: data.channel.title,
-          });
-        });
-      });
-      const result = await categorizeBlocks(allBlocks, false);
-      setCategoryResult(result);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Unknown error';
-      setCategorizeError(msg);
-    } finally {
-      setIsCategorizing(false);
-    }
-  }, []);
-
-  const handleClearCategories = useCallback(() => {
-    clearCategoryCache();
-    setCategoryResult(null);
-    setSelectedCategory(null);
-    autoCurateTriggered.current = false;
-  }, []);
-
   const loadedChannels = useMemo(() => new Set(channelData.keys()), [channelData]);
-
-  const categoryAssignments = categoryResult?.assignments || null;
-  const categoryNames = categoryResult?.categories || null;
 
   if (error) {
     return (
@@ -274,19 +204,11 @@ function App() {
           onBlockTypeFilterChange={setBlockTypeFilter}
           totalBlocks={blocks.length}
           selectedChannelTitle={selectedChannel ? channelData.get(selectedChannel)?.channel.title : undefined}
-          categories={categoryNames}
-          selectedCategory={selectedCategory}
-          onSelectCategory={setSelectedCategory}
-          onCategorize={handleCategorize}
-          onClearCategories={handleClearCategories}
-          isCategorizing={isCategorizing}
-          categorizeError={categorizeError}
-          hasBlocks={channelData.size > 0}
         />
         <BlockGrid
           blocks={blocks}
+          allBlocks={allBlocks}
           loading={loadingBlocks && blocks.length === 0}
-          categoryAssignments={categoryAssignments}
         />
       </main>
     </div>
