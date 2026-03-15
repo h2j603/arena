@@ -2,7 +2,7 @@ import type { ArenaChannel, ArenaBlock } from './types';
 
 const BASE_URL = 'https://api.are.na/v2';
 
-const DEFAULT_TOKEN = 'R7a3rYZUyvGORi1ZQSk3W7y4s0ISiOABodlx8lUiELY';
+const DEFAULT_TOKEN = 'kj07Pn6znI8oLIEBMpQUTSRaBrSKWa-Bf1b-0PHvEk8';
 const DEFAULT_SLUG = 'hyuk-jang-cud6vccao20';
 
 let accessToken = localStorage.getItem('arena_token') || DEFAULT_TOKEN;
