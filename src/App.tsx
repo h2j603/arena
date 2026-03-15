@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getSlug, getUserChannels, getChannelContents } from './api';
+import { getSlug, getToken, getUserChannels, getChannelContents } from './api';
 import type { ArenaChannel, ArenaBlock, ViewMode } from './types';
 import { Sidebar } from './components/Sidebar';
 import { BlockGrid } from './components/BlockGrid';
@@ -22,15 +22,18 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [blockTypeFilter, setBlockTypeFilter] = useState<string>('all');
   const [error, setError] = useState<string | null>(null);
+  const [debug, setDebug] = useState(`slug: "${username}" | token: "${getToken() ? getToken().slice(0, 8) + '...' : '(empty)'}"`);
 
   const loadChannels = useCallback(async (slug: string) => {
     try {
       setLoading(true);
       setError(null);
       const ch = await getUserChannels(slug);
+      setDebug(prev => prev + ` | channels: ${ch.length}`);
       setChannels(ch);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Unknown error';
+      setDebug(prev => prev + ` | ERROR: ${msg}`);
       setError(`Failed to load: ${msg}`);
     } finally {
       setLoading(false);
@@ -105,10 +108,17 @@ function App() {
     }
   }, [channels, channelData.size]);
 
+  const debugBar = (
+    <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#111', color: '#0f0', fontSize: 11, padding: '6px 10px', zIndex: 9999, fontFamily: 'monospace', wordBreak: 'break-all' }}>
+      {debug}
+    </div>
+  );
+
   if (error) {
     return (
       <div className="loading-screen">
         <p className="login-error">{error}</p>
+        {debugBar}
       </div>
     );
   }
@@ -118,6 +128,7 @@ function App() {
       <div className="loading-screen">
         <div className="loading-spinner" />
         <p>Loading your Are.na...</p>
+        {debugBar}
       </div>
     );
   }
@@ -150,6 +161,7 @@ function App() {
           loading={loadingBlocks && blocks.length === 0}
         />
       </main>
+      {debugBar}
     </div>
   );
 }
