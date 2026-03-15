@@ -11,7 +11,21 @@ export interface CategoryResult {
   assignments: Record<string, string[]>;
 }
 
-const CACHE_KEY = 'arena_categories';
+// Fixed categories — always the same, UI can render them immediately
+export const FIXED_CATEGORIES = [
+  'Visual Systems',
+  'Typography & Language',
+  'Space & Architecture',
+  'Color & Material',
+  'Digital & Interface',
+  'Nature & Organic',
+  'Culture & Society',
+  'Photography & Film',
+  'Objects & Artifacts',
+  'Abstract & Pattern',
+] as const;
+
+const CACHE_KEY = 'arena_categories_v2';
 
 export function getCachedCategories(): CategoryResult | null {
   try {
@@ -40,28 +54,28 @@ export async function categorizeBlocks(
     if (cached) return cached;
   }
 
-  // Text-only metadata — no images, fast
   const blockList = blocks.map((b) => {
     const title = b.title || 'Untitled';
     const desc = b.description ? ` — ${b.description.slice(0, 60)}` : '';
     return `${b.id}: [${b.type}] "${title}" (ch: ${b.channelTitle})${desc}`;
   }).join('\n');
 
-  const prompt = `You are a creative art curator organizing a personal Are.na archive into an exhibition.
+  const categoryList = FIXED_CATEGORIES.join(', ');
+
+  const prompt = `You are organizing a personal Are.na archive. Assign every reference below to 1-2 of these EXACT categories:
+
+Categories: ${categoryList}
 
 References:
 ${blockList}
 
-Create 8-12 evocative categories and assign every reference to 1-2 categories.
-
-Category naming guidelines:
-- Poetic, specific, editorial — NOT generic (not "Design", "Art", "Misc")
-- Think exhibition section titles: "Systematic Color", "Found Typography", "Quiet Structures", "Digital Rituals"
-- Based on themes you infer from titles, channels, and descriptions
-- Every reference MUST be assigned
+Rules:
+- Use ONLY the categories listed above (exact spelling)
+- Every reference MUST be assigned to 1 or 2 categories
+- Choose the most relevant categories based on the reference's title, type, channel, and description
 
 Return ONLY valid JSON:
-{"categories":["Category One","Category Two",...],"assignments":{"blockId":["Category One"],...}}`;
+{"assignments":{"blockId":["Category One","Category Two"],...}}`;
 
   const response = await fetch('/api/categorize', {
     method: 'POST',
@@ -85,13 +99,26 @@ Return ONLY valid JSON:
   if (!jsonMatch) throw new Error('Invalid response format');
 
   const parsed = JSON.parse(jsonMatch[0]);
+  const assignments: Record<string, string[]> = parsed.assignments || {};
+
+  // Filter to only valid fixed categories
+  const validCats = new Set<string>(FIXED_CATEGORIES);
+  for (const [id, cats] of Object.entries(assignments)) {
+    assignments[id] = (cats as string[]).filter(c => validCats.has(c));
+  }
+
+  // Only include categories that have at least one assignment
+  const usedCategories = FIXED_CATEGORIES.filter(cat =>
+    Object.values(assignments).some(cats => cats.includes(cat))
+  );
+
   const result: CategoryResult = {
-    categories: parsed.categories || [],
-    assignments: parsed.assignments || {},
+    categories: usedCategories,
+    assignments,
   };
 
   if (!result.categories.length) {
-    throw new Error('No categories generated');
+    throw new Error('No categories assigned');
   }
 
   setCachedCategories(result);

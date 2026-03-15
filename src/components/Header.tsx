@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react';
 import type { ViewMode } from '../types';
+import { FIXED_CATEGORIES } from '../categorize';
 
 interface Props {
   viewMode: ViewMode;
@@ -49,7 +50,6 @@ export function Header({
 }: Props) {
   const catScrollRef = useRef<HTMLDivElement>(null);
 
-  // Scroll active category into view
   useEffect(() => {
     if (!catScrollRef.current || !selectedCategory) return;
     const active = catScrollRef.current.querySelector('.cat-tab.active') as HTMLElement;
@@ -58,9 +58,13 @@ export function Header({
     }
   }, [selectedCategory]);
 
+  // Use fixed categories always — show them even before AI responds
+  // Once AI assigns, `categories` will contain only the ones with assignments
+  const displayCategories = categories || [...FIXED_CATEGORIES];
+  const isLoaded = categories !== null;
+
   return (
     <header className="header">
-      {/* Primary bar: title + controls */}
       <div className="header-bar">
         <div className="header-identity">
           <h2 className="header-title">
@@ -128,26 +132,27 @@ export function Header({
         </div>
       </div>
 
-      {/* Category navigation strip */}
+      {/* Category strip — always rendered with fixed structure */}
       {hasBlocks && (
         <div className="header-cat-strip">
-          {categories ? (
-            <div className="cat-scroll" ref={catScrollRef}>
+          <div className="cat-scroll" ref={catScrollRef}>
+            <button
+              className={`cat-tab ${selectedCategory === null ? 'active' : ''}`}
+              onClick={() => onSelectCategory(null)}
+            >
+              All
+            </button>
+            {displayCategories.map((cat) => (
               <button
-                className={`cat-tab ${selectedCategory === null ? 'active' : ''}`}
-                onClick={() => onSelectCategory(null)}
+                key={cat}
+                className={`cat-tab ${selectedCategory === cat ? 'active' : ''} ${!isLoaded ? 'cat-tab--pending' : ''}`}
+                onClick={() => isLoaded ? onSelectCategory(selectedCategory === cat ? null : cat) : undefined}
+                disabled={!isLoaded}
               >
-                All
+                {cat}
               </button>
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  className={`cat-tab ${selectedCategory === cat ? 'active' : ''}`}
-                  onClick={() => onSelectCategory(selectedCategory === cat ? null : cat)}
-                >
-                  {cat}
-                </button>
-              ))}
+            ))}
+            {isLoaded && (
               <div className="cat-actions">
                 <button
                   className="cat-refresh"
@@ -166,20 +171,17 @@ export function Header({
                   </svg>
                 </button>
               </div>
-            </div>
-          ) : (
-            <div className="cat-loading-state">
-              {isCategorizing ? (
-                <div className="cat-curating">
-                  <div className="cat-curating-spinner" />
-                  <span>Curating your archive...</span>
-                </div>
-              ) : categorizeError ? (
-                <div className="cat-error-state">
-                  <span className="cat-error-msg">{categorizeError.slice(0, 60)}</span>
-                  <button className="cat-retry-btn" onClick={onCategorize}>Retry</button>
-                </div>
-              ) : null}
+            )}
+            {isCategorizing && (
+              <div className="cat-loading-inline">
+                <div className="cat-curating-spinner" />
+              </div>
+            )}
+          </div>
+          {categorizeError && (
+            <div className="cat-error-inline">
+              <span className="cat-error-msg">{categorizeError.slice(0, 40)}</span>
+              <button className="cat-retry-btn" onClick={onCategorize}>Retry</button>
             </div>
           )}
         </div>
@@ -199,7 +201,6 @@ const headerStyles = `
     border-bottom: 1px solid var(--border);
   }
 
-  /* Primary bar */
   .header-bar {
     display: flex;
     align-items: center;
@@ -237,7 +238,6 @@ const headerStyles = `
     flex-shrink: 0;
   }
 
-  /* Type filters */
   .header-types {
     display: flex;
     gap: 1px;
@@ -253,9 +253,7 @@ const headerStyles = `
     transition: all var(--transition-fast);
     letter-spacing: 0.2px;
   }
-  .type-btn:hover {
-    color: var(--text-secondary);
-  }
+  .type-btn:hover { color: var(--text-secondary); }
   .type-btn.active {
     color: var(--text);
     background: var(--bg-card);
@@ -263,7 +261,6 @@ const headerStyles = `
     font-weight: 500;
   }
 
-  /* Search */
   .search-wrap {
     position: relative;
     display: flex;
@@ -300,7 +297,6 @@ const headerStyles = `
     gap: 8px;
   }
 
-  /* View toggle */
   .view-toggle {
     display: flex;
     gap: 2px;
@@ -324,21 +320,23 @@ const headerStyles = `
     box-shadow: var(--shadow-sm);
   }
 
-  /* Category strip */
+  /* Category strip — fixed height, no layout shift */
   .header-cat-strip {
     border-top: 1px solid var(--border-light);
-    min-height: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
+    overflow: hidden;
   }
   .cat-scroll {
     display: flex;
     align-items: center;
     gap: 2px;
-    padding: 4px 28px;
+    padding: 0 28px;
     overflow-x: auto;
     scrollbar-width: none;
     flex: 1;
+    height: 100%;
   }
   .cat-scroll::-webkit-scrollbar { display: none; }
 
@@ -350,8 +348,9 @@ const headerStyles = `
     border-radius: 20px;
     transition: all var(--transition-fast);
     letter-spacing: 0.1px;
+    flex-shrink: 0;
   }
-  .cat-tab:hover {
+  .cat-tab:hover:not(:disabled) {
     color: var(--text-secondary);
     background: var(--accent-soft);
   }
@@ -359,6 +358,10 @@ const headerStyles = `
     color: var(--tag-active-text);
     background: var(--tag-active);
     font-weight: 500;
+  }
+  .cat-tab--pending {
+    opacity: 0.35;
+    cursor: default;
   }
 
   .cat-actions {
@@ -388,19 +391,11 @@ const headerStyles = `
     animation: spin 0.8s linear infinite;
   }
 
-  /* Loading/error states */
-  .cat-loading-state {
-    padding: 0 28px;
+  .cat-loading-inline {
     display: flex;
     align-items: center;
-    height: 36px;
-  }
-  .cat-curating {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 11px;
-    color: var(--text-muted);
+    margin-left: 8px;
+    flex-shrink: 0;
   }
   .cat-curating-spinner {
     width: 12px;
@@ -410,20 +405,24 @@ const headerStyles = `
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
   }
-  .cat-error-state {
+  .cat-error-inline {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
+    padding-right: 28px;
+    flex-shrink: 0;
   }
   .cat-error-msg {
-    font-size: 11px;
+    font-size: 10px;
     color: #b55;
+    white-space: nowrap;
   }
   .cat-retry-btn {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--text-muted);
     text-decoration: underline;
     text-underline-offset: 2px;
+    white-space: nowrap;
   }
   .cat-retry-btn:hover { color: var(--text); }
 
@@ -432,7 +431,6 @@ const headerStyles = `
       padding: 0 14px 0 48px;
       gap: 8px;
       height: 46px;
-      flex-wrap: wrap;
     }
     .header-identity {
       flex: 1;
@@ -442,10 +440,8 @@ const headerStyles = `
     .header-types { display: none; }
     .header-search { width: 100px; font-size: 11px; }
     .header-search:focus { width: 140px; }
-    .cat-scroll {
-      padding: 4px 14px;
-    }
+    .header-cat-strip { height: 34px; }
+    .cat-scroll { padding: 0 14px; }
     .cat-tab { font-size: 10px; padding: 3px 10px; }
-    .cat-loading-state { padding: 0 14px; }
   }
 `;
