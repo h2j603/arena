@@ -5,6 +5,8 @@ interface Props {
   onViewModeChange: (mode: ViewMode) => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
+  blockTypeFilter: string;
+  onBlockTypeFilterChange: (t: string) => void;
   totalBlocks: number;
   selectedChannelTitle?: string;
   categories: string[] | null;
@@ -17,11 +19,22 @@ interface Props {
   hasBlocks: boolean;
 }
 
+const BLOCK_TYPES = [
+  { value: 'all', label: 'All' },
+  { value: 'image', label: 'Image' },
+  { value: 'link', label: 'Link' },
+  { value: 'text', label: 'Text' },
+  { value: 'media', label: 'Media' },
+  { value: 'attachment', label: 'File' },
+];
+
 export function Header({
   viewMode,
   onViewModeChange,
   searchQuery,
   onSearchChange,
+  blockTypeFilter,
+  onBlockTypeFilterChange,
   totalBlocks,
   selectedChannelTitle,
   categories,
@@ -41,6 +54,20 @@ export function Header({
             {selectedChannelTitle || 'All References'}
           </h2>
           <span className="header-count">{totalBlocks}</span>
+        </div>
+
+        <div className="header-center">
+          <div className="header-filters">
+            {BLOCK_TYPES.map((t) => (
+              <button
+                key={t.value}
+                className={`filter-tag ${blockTypeFilter === t.value ? 'active' : ''}`}
+                onClick={() => onBlockTypeFilterChange(t.value)}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="header-right">
@@ -160,6 +187,30 @@ const headerStyles = `
     color: var(--text-muted);
     font-weight: 300;
   }
+  .header-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    min-width: 0;
+  }
+  .header-filters {
+    display: flex;
+    gap: 2px;
+  }
+  .filter-tag {
+    padding: 4px 10px;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    transition: color 0.15s;
+  }
+  .filter-tag:hover { color: var(--text); }
+  .filter-tag.active {
+    color: var(--text);
+    font-weight: 500;
+    border-bottom: 1.5px solid var(--text);
+  }
   .header-right {
     display: flex;
     align-items: center;
@@ -266,6 +317,14 @@ const headerStyles = `
       text-align: center;
     }
     .header-title { font-size: 20px; }
+    .header-center {
+      order: 3;
+      width: 100%;
+      justify-content: flex-start;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .header-center::-webkit-scrollbar { display: none; }
     .header-right { order: 2; width: 100%; }
     .header-search { flex: 1; width: auto; }
     .header-search:focus { width: auto; }
