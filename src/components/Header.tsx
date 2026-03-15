@@ -197,6 +197,8 @@ const headerStyles = `
     z-index: 50;
     background: var(--bg);
     border-bottom: 1px solid var(--border);
+    max-width: 100vw;
+    overflow: hidden;
   }
 
   /* Row 1 */
@@ -327,6 +329,8 @@ const headerStyles = `
     height: 36px;
     display: flex;
     align-items: center;
+    max-width: 100%;
+    overflow: hidden;
   }
   .cat-scroll {
     display: flex;
@@ -336,6 +340,7 @@ const headerStyles = `
     overflow-x: auto;
     scrollbar-width: none;
     flex: 1;
+    min-width: 0;
     height: 100%;
     -webkit-overflow-scrolling: touch;
   }
