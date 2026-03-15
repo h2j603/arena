@@ -13,19 +13,19 @@ export interface CategoryResult {
 
 // Fixed categories — always the same, UI can render them immediately
 export const FIXED_CATEGORIES = [
-  'Grid & Layout',
-  'Type & Lettering',
-  'Color & Texture',
-  'Identity & Branding',
-  'Editorial & Print',
-  'Poster & Signage',
-  'Web & UI',
-  'Photography',
-  'Illustration & Drawing',
-  'Motion & Film',
+  'Composition',
+  'Typographic Voice',
+  'Chromatic',
+  'Surface & Materiality',
+  'Systematic',
+  'Vernacular',
+  'Spatial',
+  'Kinetic',
+  'Narrative',
+  'Raw Form',
 ] as const;
 
-const CACHE_KEY = 'arena_categories_v3';
+const CACHE_KEY = 'arena_categories_v4';
 
 export function getCachedCategories(): CategoryResult | null {
   try {
