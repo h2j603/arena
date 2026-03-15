@@ -188,8 +188,8 @@ const sidebarStyles = `
   }
   .sidebar-title {
     font-family: var(--font-serif);
-    font-size: 18px;
-    font-weight: 400;
+    font-size: 22px;
+    font-weight: 300;
     letter-spacing: -0.3px;
   }
   .sidebar-toggle {

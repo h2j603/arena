@@ -15,7 +15,7 @@ function channelColor(name: string): string {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
   const hue = Math.abs(hash) % 360;
-  return `hsl(${hue}, 45%, 45%)`;
+  return `hsl(${hue}, 72%, 48%)`;
 }
 
 function getDisplayTitle(block: ArenaBlock): string | null {
@@ -166,14 +166,14 @@ const BlockCard = memo(function BlockCard({
     }
     if (block.class === 'Text') {
       return (
-        <div className="block-card-text">
+        <div className="block-card-text" style={{ borderLeftColor: color }}>
           <p>{block.content?.slice(0, 300)}</p>
         </div>
       );
     }
     if (block.class === 'Link') {
       return (
-        <div className="block-card-link">
+        <div className="block-card-link" style={{ borderLeftColor: color }}>
           <span className="block-card-link-title">{block.source?.title || block.title || 'Link'}</span>
           {block.source?.url && (
             <span className="block-card-link-host">{new URL(block.source.url).hostname}</span>
@@ -181,7 +181,7 @@ const BlockCard = memo(function BlockCard({
         </div>
       );
     }
-    return <div className="block-card-fallback"><span>{block.class}</span></div>;
+    return <div className="block-card-fallback" style={{ borderColor: color }}><span>{block.class}</span></div>;
   };
 
   return (
@@ -212,9 +212,15 @@ const gridStyles = `
     padding: 100px 20px;
     color: var(--text-muted);
     font-size: 13px;
-    gap: 8px;
+    gap: 10px;
+    text-align: center;
   }
-  .grid-empty-sub { font-size: 12px; }
+  .grid-empty p {
+    font-family: var(--font-serif);
+    font-size: 18px;
+    color: var(--text-secondary);
+  }
+  .grid-empty-sub { font-size: 12px; font-family: var(--font-sans); }
 
   /* Grid card */
   .block-card {
@@ -237,10 +243,11 @@ const gridStyles = `
     transition: opacity 0.3s ease;
   }
   .block-card-text {
-    padding: 14px 0;
+    padding: 14px 16px;
     font-size: 12px;
     line-height: 1.7;
     color: var(--text-secondary);
+    border-left: 2.5px solid transparent;
   }
   .block-card-text p {
     display: -webkit-box;
@@ -252,9 +259,8 @@ const gridStyles = `
     display: flex;
     flex-direction: column;
     gap: 6px;
-    padding: 20px 0;
-    border-top: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
+    padding: 20px 16px;
+    border-left: 2.5px solid transparent;
   }
   .block-card-link-title {
     font-family: var(--font-serif);
@@ -344,8 +350,9 @@ const gridStyles = `
   }
   .curated-section-title {
     font-family: var(--font-serif);
-    font-size: 32px;
+    font-size: 38px;
     font-weight: 300;
+    font-style: italic;
     letter-spacing: -0.5px;
     color: var(--text);
     margin-bottom: 24px;
@@ -363,7 +370,7 @@ const gridStyles = `
   }
   .curated-grid .block-card-visual img {
     width: 100%;
-    height: 200px;
+    aspect-ratio: 4/3;
     object-fit: cover;
   }
   .curated-grid .block-card-meta {
@@ -377,25 +384,26 @@ const gridStyles = `
       padding: 10px;
     }
     .block-card { margin-bottom: 14px; }
-    .block-card-meta { padding: 4px 0; }
+    .block-card-meta { padding: 4px 0; text-align: center; align-items: center; }
     .block-card-channel { font-size: 9px; }
     .block-card-title { font-size: 11px; -webkit-line-clamp: 1; }
     .block-card-text { padding: 8px 0; font-size: 11px; }
-    .block-card-link { padding: 12px 0; }
-    .block-card-link-title { font-size: 13px; }
+    .block-card-link { padding: 12px 0; text-align: center; align-items: center; }
+    .block-card-link-title { font-size: 14px; }
 
     .curated-view { padding: 0 16px 60px; }
     .curated-section { padding-top: 36px; }
     .curated-section-title {
-      font-size: 26px;
+      font-size: 28px;
       margin-bottom: 16px;
       text-align: center;
     }
+    .curated-grid .block-card-meta { text-align: center; align-items: center; }
     .curated-grid {
       grid-template-columns: repeat(2, 1fr);
       gap: 10px;
     }
-    .curated-grid .block-card-visual img { height: 150px; }
+    .curated-grid .block-card-visual img { aspect-ratio: 1/1; }
     .curated-nav { padding: 10px 16px; gap: 16px; justify-content: center; }
   }
 `;

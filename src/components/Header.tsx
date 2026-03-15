@@ -5,8 +5,6 @@ interface Props {
   onViewModeChange: (mode: ViewMode) => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
-  blockTypeFilter: string;
-  onBlockTypeFilterChange: (t: string) => void;
   totalBlocks: number;
   selectedChannelTitle?: string;
   categories: string[] | null;
@@ -19,25 +17,16 @@ interface Props {
   hasBlocks: boolean;
 }
 
-const BLOCK_TYPES = [
-  { value: 'all', label: 'All' },
-  { value: 'image', label: 'Image' },
-  { value: 'link', label: 'Link' },
-  { value: 'text', label: 'Text' },
-  { value: 'media', label: 'Media' },
-  { value: 'attachment', label: 'File' },
-];
-
 export function Header({
   viewMode,
   onViewModeChange,
   searchQuery,
   onSearchChange,
-  blockTypeFilter,
-  onBlockTypeFilterChange,
   totalBlocks,
   selectedChannelTitle,
   categories,
+  selectedCategory,
+  onSelectCategory,
   onCategorize,
   onClearCategories,
   isCategorizing,
@@ -52,20 +41,6 @@ export function Header({
             {selectedChannelTitle || 'All References'}
           </h2>
           <span className="header-count">{totalBlocks}</span>
-        </div>
-
-        <div className="header-center">
-          <div className="header-filters">
-            {BLOCK_TYPES.map((t) => (
-              <button
-                key={t.value}
-                className={`filter-tag ${blockTypeFilter === t.value ? 'active' : ''}`}
-                onClick={() => onBlockTypeFilterChange(t.value)}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
         </div>
 
         <div className="header-right">
@@ -107,170 +82,197 @@ export function Header({
         </div>
       </div>
 
-      {/* AI Categorize action */}
-      {(hasBlocks || categories) && (
+      {/* Category navigation — always visible when blocks loaded */}
+      {hasBlocks && (
         <div className="header-categories">
-          {!categories ? (
+          {categories ? (
             <>
               <button
-                className="categorize-btn"
-                onClick={onCategorize}
-                disabled={isCategorizing}
+                className={`cat-btn ${selectedCategory === null ? 'active' : ''}`}
+                onClick={() => onSelectCategory(null)}
               >
-                {isCategorizing ? 'Curating...' : 'Curate'}
+                All
               </button>
-              {categorizeError && (
-                <span className="categorize-error">{categorizeError.slice(0, 60)}</span>
-              )}
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  className={`cat-btn ${selectedCategory === cat ? 'active' : ''}`}
+                  onClick={() => onSelectCategory(selectedCategory === cat ? null : cat)}
+                >
+                  {cat}
+                </button>
+              ))}
+              <button className="cat-reset" onClick={onClearCategories}>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                </svg>
+              </button>
             </>
           ) : (
-            <button className="clear-categories" onClick={onClearCategories}>
-              Reset curation
+            <button
+              className="cat-curate-btn"
+              onClick={onCategorize}
+              disabled={isCategorizing}
+            >
+              {isCategorizing ? 'Curating...' : 'Curate with AI'}
             </button>
+          )}
+          {categorizeError && (
+            <span className="cat-error">{categorizeError.slice(0, 50)}</span>
           )}
         </div>
       )}
 
-      <style>{`
-        .header {
-          position: sticky;
-          top: 0;
-          z-index: 50;
-          background: var(--bg);
-          border-bottom: 1px solid var(--border);
-        }
-        .header-top {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 16px;
-          padding: 14px 24px;
-        }
-        .header-left {
-          display: flex;
-          align-items: baseline;
-          gap: 8px;
-          flex-shrink: 0;
-        }
-        .header-title {
-          font-family: var(--font-serif);
-          font-size: 20px;
-          font-weight: 400;
-          letter-spacing: -0.3px;
-        }
-        .header-count {
-          font-size: 11px;
-          color: var(--text-muted);
-        }
-        .header-center {
-          flex: 1;
-          display: flex;
-          justify-content: center;
-          min-width: 0;
-        }
-        .header-filters {
-          display: flex;
-          gap: 2px;
-        }
-        .filter-tag {
-          padding: 4px 10px;
-          font-size: 11px;
-          color: var(--text-muted);
-          letter-spacing: 0.3px;
-          text-transform: uppercase;
-          transition: color 0.15s;
-        }
-        .filter-tag:hover { color: var(--text); }
-        .filter-tag.active {
-          color: var(--text);
-          font-weight: 500;
-          border-bottom: 1.5px solid var(--text);
-        }
-        .header-right {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          flex-shrink: 0;
-        }
-        .header-search {
-          padding: 5px 0;
-          border: none;
-          border-bottom: 1px solid var(--border);
-          border-radius: 0;
-          background: transparent;
-          color: var(--text);
-          font-size: 12px;
-          font-family: inherit;
-          outline: none;
-          width: 140px;
-          transition: border-color 0.2s, width 0.2s;
-        }
-        .header-search::placeholder { color: var(--text-muted); }
-        .header-search:focus {
-          border-color: var(--text);
-          width: 180px;
-        }
-        .view-toggle {
-          display: flex;
-          gap: 4px;
-          flex-shrink: 0;
-        }
-        .view-btn {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 4px;
-          color: var(--text-muted);
-          transition: color 0.15s;
-        }
-        .view-btn.active { color: var(--text); }
-
-        .header-categories {
-          padding: 0 24px 10px;
-        }
-        .categorize-btn {
-          font-size: 11px;
-          color: var(--text-muted);
-          letter-spacing: 0.3px;
-          text-transform: uppercase;
-          transition: color 0.15s;
-        }
-        .categorize-btn:hover:not(:disabled) { color: var(--text); }
-        .categorize-btn:disabled { opacity: 0.5; cursor: wait; }
-        .clear-categories {
-          font-size: 11px;
-          color: var(--text-muted);
-          transition: color 0.15s;
-        }
-        .clear-categories:hover { color: var(--text); }
-        .categorize-error {
-          font-size: 11px;
-          color: #b55;
-          margin-left: 8px;
-        }
-
-        @media (max-width: 768px) {
-          .header-top {
-            padding: 10px 12px 10px 52px;
-            flex-wrap: wrap;
-            gap: 6px;
-          }
-          .header-left { width: 100%; order: 1; }
-          .header-title { font-size: 17px; }
-          .header-center {
-            order: 3;
-            width: 100%;
-            justify-content: flex-start;
-            overflow-x: auto;
-            scrollbar-width: none;
-          }
-          .header-center::-webkit-scrollbar { display: none; }
-          .header-right { order: 2; width: 100%; }
-          .header-search { flex: 1; width: auto; }
-          .header-search:focus { width: auto; }
-          .header-categories { padding: 0 12px 8px 52px; }
-        }
-      `}</style>
+      <style>{headerStyles}</style>
     </header>
   );
 }
+
+const headerStyles = `
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 24px;
+  }
+  .header-left {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .header-title {
+    font-family: var(--font-serif);
+    font-size: 24px;
+    font-weight: 300;
+    letter-spacing: -0.5px;
+  }
+  .header-count {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 300;
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .header-search {
+    padding: 5px 0;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+    background: transparent;
+    color: var(--text);
+    font-size: 12px;
+    font-family: inherit;
+    outline: none;
+    width: 140px;
+    transition: border-color 0.2s, width 0.2s;
+  }
+  .header-search::placeholder { color: var(--text-muted); }
+  .header-search:focus {
+    border-color: var(--text);
+    width: 180px;
+  }
+  .view-toggle {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .view-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    color: var(--text-muted);
+    transition: color 0.15s;
+  }
+  .view-btn.active { color: var(--text); }
+
+  /* Category bar */
+  .header-categories {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 24px 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .header-categories::-webkit-scrollbar { display: none; }
+
+  .cat-btn {
+    font-size: 11px;
+    padding: 4px 10px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    transition: color 0.15s;
+    border-bottom: 1.5px solid transparent;
+  }
+  .cat-btn:hover { color: var(--text); }
+  .cat-btn.active {
+    color: var(--text);
+    font-weight: 500;
+    border-bottom-color: var(--text);
+  }
+  .cat-reset {
+    display: flex;
+    align-items: center;
+    padding: 4px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    transition: color 0.15s;
+    margin-left: 4px;
+  }
+  .cat-reset:hover { color: var(--text); }
+
+  .cat-curate-btn {
+    font-family: var(--font-serif);
+    font-size: 13px;
+    font-style: italic;
+    color: var(--text-muted);
+    transition: color 0.15s;
+    white-space: nowrap;
+  }
+  .cat-curate-btn:hover:not(:disabled) { color: var(--text); }
+  .cat-curate-btn:disabled { opacity: 0.5; cursor: wait; }
+
+  .cat-error {
+    font-size: 11px;
+    color: #b55;
+    white-space: nowrap;
+    margin-left: 8px;
+  }
+
+  @media (max-width: 768px) {
+    .header-top {
+      padding: 10px 12px 10px 52px;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .header-left {
+      width: 100%;
+      order: 1;
+      justify-content: center;
+      text-align: center;
+    }
+    .header-title { font-size: 20px; }
+    .header-right { order: 2; width: 100%; }
+    .header-search { flex: 1; width: auto; }
+    .header-search:focus { width: auto; }
+    .header-categories {
+      padding: 0 12px 8px;
+      gap: 2px;
+    }
+    .cat-btn { font-size: 10px; padding: 3px 8px; }
+  }
+`;

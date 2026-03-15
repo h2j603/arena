@@ -173,10 +173,10 @@ export function BlockDetail({ block, channelTitle, onClose, categories }: Props)
         }
         .detail-title {
           font-family: var(--font-serif);
-          font-size: 20px;
-          font-weight: 400;
-          letter-spacing: -0.3px;
-          margin-bottom: 14px;
+          font-size: 26px;
+          font-weight: 300;
+          letter-spacing: -0.5px;
+          margin-bottom: 16px;
         }
         .detail-info {
           display: flex;
@@ -193,6 +193,9 @@ export function BlockDetail({ block, channelTitle, onClose, categories }: Props)
           color: var(--text-muted);
           width: 60px;
           flex-shrink: 0;
+          font-size: 10px;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
         }
         .detail-link {
           color: var(--text-secondary);
@@ -206,9 +209,10 @@ export function BlockDetail({ block, channelTitle, onClose, categories }: Props)
           margin-bottom: 14px;
         }
         .detail-cat-tag {
-          font-size: 12px;
+          font-family: var(--font-serif);
+          font-size: 13px;
           font-style: italic;
-          color: var(--text-muted);
+          color: var(--text-secondary);
         }
         .detail-desc {
           font-size: 12px;
@@ -241,6 +245,9 @@ export function BlockDetail({ block, channelTitle, onClose, categories }: Props)
           }
           .detail-meta {
             padding: 16px;
+          }
+          .detail-title {
+            text-align: center;
           }
         }
       `}</style>

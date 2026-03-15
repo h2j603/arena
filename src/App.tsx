@@ -36,7 +36,7 @@ function App() {
   const [loadingBlocks, setLoadingBlocks] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [searchQuery, setSearchQuery] = useState('');
-  const [blockTypeFilter, setBlockTypeFilter] = useState<string>('all');
+  const [blockTypeFilter] = useState<string>('all');
   const [error, setError] = useState<string | null>(null);
   const [hiddenChannels, setHiddenChannels] = useState<Set<string>>(getHiddenChannels);
   const [categoryResult, setCategoryResult] = useState<CategoryResult | null>(null);
@@ -240,8 +240,6 @@ function App() {
           onViewModeChange={setViewMode}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-          blockTypeFilter={blockTypeFilter}
-          onBlockTypeFilterChange={setBlockTypeFilter}
           totalBlocks={blocks.length}
           selectedChannelTitle={selectedChannel ? channelData.get(selectedChannel)?.channel.title : undefined}
           categories={categoryNames}

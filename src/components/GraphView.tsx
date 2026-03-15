@@ -27,7 +27,7 @@ function channelColor(name: string): string {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
   const hue = Math.abs(hash) % 360;
-  return `hsl(${hue}, 50%, 58%)`;
+  return `hsl(${hue}, 72%, 52%)`;
 }
 
 function channelColorRGBA(name: string, alpha: number): string {
@@ -36,7 +36,7 @@ function channelColorRGBA(name: string, alpha: number): string {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
   }
   const hue = Math.abs(hash) % 360;
-  return `hsla(${hue}, 50%, 58%, ${alpha})`;
+  return `hsla(${hue}, 72%, 52%, ${alpha})`;
 }
 
 export function GraphView({ blocks, categoryAssignments, onSelectBlock }: Props) {
