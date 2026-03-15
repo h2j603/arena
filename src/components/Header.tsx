@@ -1,5 +1,3 @@
-import { useState } from 'react';
-import { getApiKey, setApiKey } from '../categorize';
 import type { ViewMode } from '../types';
 
 interface Props {
@@ -48,18 +46,6 @@ export function Header({
   categorizeError,
   hasBlocks,
 }: Props) {
-  const [showKeyInput, setShowKeyInput] = useState(false);
-  const [keyValue, setKeyValue] = useState('');
-  const hasKey = !!getApiKey();
-
-  const handleSaveKey = () => {
-    if (keyValue.trim()) {
-      setApiKey(keyValue.trim());
-      setShowKeyInput(false);
-      setKeyValue('');
-    }
-  };
-
   return (
     <header className="header">
       <div className="header-top">
@@ -125,47 +111,17 @@ export function Header({
         <div className="header-categories">
           {!categories && (
             <>
-              {showKeyInput ? (
-                <div className="api-key-input-row">
-                  <input
-                    type="password"
-                    className="api-key-input"
-                    placeholder="sk-ant-api03-..."
-                    value={keyValue}
-                    onChange={(e) => setKeyValue(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSaveKey()}
-                    autoFocus
-                  />
-                  <button className="api-key-save" onClick={handleSaveKey}>Save</button>
-                  <button className="api-key-cancel" onClick={() => setShowKeyInput(false)}>
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                      <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                    </svg>
-                  </button>
-                </div>
-              ) : !hasKey ? (
-                <button
-                  className="categorize-btn"
-                  onClick={() => setShowKeyInput(true)}
-                >
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <path d="M7 1l1.5 3.5L12 6l-3.5 1.5L7 11l-1.5-3.5L2 6l3.5-1.5L7 1z" stroke="currentColor" strokeWidth="1" fill="currentColor" fillOpacity="0.15"/>
-                  </svg>
-                  Set API Key to Categorize
-                </button>
-              ) : (
-                <button
-                  className="categorize-btn"
-                  onClick={onCategorize}
-                  disabled={isCategorizing}
-                >
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                    <path d="M7 1l1.5 3.5L12 6l-3.5 1.5L7 11l-1.5-3.5L2 6l3.5-1.5L7 1z" stroke="currentColor" strokeWidth="1" fill="currentColor" fillOpacity="0.15"/>
-                  </svg>
-                  {isCategorizing ? 'Analyzing...' : 'Categorize with AI'}
-                </button>
-              )}
-              {categorizeError && categorizeError !== 'NO_API_KEY' && (
+              <button
+                className="categorize-btn"
+                onClick={onCategorize}
+                disabled={isCategorizing}
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M7 1l1.5 3.5L12 6l-3.5 1.5L7 11l-1.5-3.5L2 6l3.5-1.5L7 1z" stroke="currentColor" strokeWidth="1" fill="currentColor" fillOpacity="0.15"/>
+                </svg>
+                {isCategorizing ? 'Analyzing...' : 'Categorize with AI'}
+              </button>
+              {categorizeError && (
                 <span className="categorize-error">Failed: {categorizeError.slice(0, 60)}</span>
               )}
             </>
@@ -367,35 +323,6 @@ export function Header({
           font-size: 11px;
           color: #c45a5a;
           white-space: nowrap;
-        }
-        .api-key-input-row {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-        .api-key-input {
-          padding: 5px 10px;
-          border: 1px solid var(--ai-accent);
-          border-radius: var(--radius);
-          background: transparent;
-          color: var(--text);
-          font-size: 11px;
-          font-family: monospace;
-          outline: none;
-          width: 200px;
-        }
-        .api-key-save {
-          padding: 5px 12px;
-          border-radius: var(--radius);
-          background: var(--ai-accent);
-          color: #fff;
-          font-size: 11px;
-          font-weight: 500;
-        }
-        .api-key-cancel {
-          padding: 4px;
-          color: var(--text-muted);
-          display: flex;
         }
 
         @media (max-width: 768px) {

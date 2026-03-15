@@ -145,19 +145,15 @@ const BlockCard = memo(function BlockCard({
 
   // Grid card - visual part differs by type
   const renderVisual = () => {
-    // Links and images with thumbnails — use large for speed
     if (block.image) {
       return (
-        <>
-          {!imgLoaded && <div className="block-card-placeholder" />}
-          <img
-            src={block.image.large.url}
-            alt=""
-            loading="lazy"
-            onLoad={() => setImgLoaded(true)}
-            style={imgLoaded ? undefined : { opacity: 0, position: 'absolute' }}
-          />
-        </>
+        <img
+          src={block.image.display.url}
+          alt=""
+          loading="lazy"
+          onLoad={() => setImgLoaded(true)}
+          style={{ opacity: imgLoaded ? 1 : 0 }}
+        />
       );
     }
     if (block.class === 'Text') {
