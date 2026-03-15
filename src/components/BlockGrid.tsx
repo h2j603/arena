@@ -9,6 +9,46 @@ interface Props {
   categoryAssignments: Record<string, string[]> | null;
 }
 
+// Deterministic color from channel name
+function channelColor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue}, 50%, 58%)`;
+}
+
+// Get display title based on block type
+function getDisplayTitle(block: ArenaBlock): string | null {
+  switch (block.class) {
+    case 'Image':
+      // Image filenames are meaningless - don't show
+      return null;
+    case 'Text':
+      // Text blocks rarely have titles - show content preview
+      return block.content?.slice(0, 120)?.replace(/\n/g, ' ') || null;
+    case 'Link':
+      return block.source?.title || block.title || null;
+    default:
+      return block.title || null;
+  }
+}
+
+// Get list title
+function getListTitle(block: ArenaBlock): string {
+  switch (block.class) {
+    case 'Image':
+      return block.description || 'Image';
+    case 'Text':
+      return block.content?.slice(0, 80)?.replace(/\n/g, ' ') || 'Text';
+    case 'Link':
+      return block.source?.title || block.title || 'Link';
+    default:
+      return block.title || block.class;
+  }
+}
+
 export function BlockGrid({ blocks, viewMode, loading, categoryAssignments }: Props) {
   const [selectedBlock, setSelectedBlock] = useState<{ block: ArenaBlock; channelTitle: string } | null>(null);
 
@@ -72,11 +112,14 @@ const BlockCard = memo(function BlockCard({
   categories: string[] | null;
 }) {
   const [imgLoaded, setImgLoaded] = useState(false);
+  const color = channelColor(channelTitle);
+  const displayTitle = getDisplayTitle(block);
 
   if (viewMode === 'list') {
+    const isLink = block.class === 'Link';
     return (
       <div className="block-list-item" onClick={onClick}>
-        <div className="block-list-thumb">
+        <div className={`block-list-thumb ${isLink ? 'block-list-thumb-lg' : ''}`}>
           {block.image ? (
             <img src={block.image.thumb.url} alt="" />
           ) : (
@@ -85,9 +128,12 @@ const BlockCard = memo(function BlockCard({
         </div>
         <div className="block-list-info">
           <span className="block-list-title">
-            {block.title || block.source?.title || 'Untitled'}
+            {getListTitle(block)}
           </span>
-          <span className="block-list-channel">{channelTitle}</span>
+          <span className="block-list-channel">
+            <span className="channel-dot" style={{ background: color }} />
+            {channelTitle}
+          </span>
         </div>
         {categories && categories.length > 0 && (
           <span className="block-list-cat">{categories[0]}</span>
@@ -97,41 +143,62 @@ const BlockCard = memo(function BlockCard({
     );
   }
 
+  // Grid card - visual part differs by type
+  const renderVisual = () => {
+    // Links and images with thumbnails
+    if (block.image) {
+      return (
+        <>
+          {!imgLoaded && <div className="block-card-placeholder" />}
+          <img
+            src={block.image.display.url}
+            alt=""
+            loading="lazy"
+            onLoad={() => setImgLoaded(true)}
+            style={imgLoaded ? undefined : { opacity: 0, position: 'absolute' }}
+          />
+        </>
+      );
+    }
+    if (block.class === 'Text') {
+      return (
+        <div className="block-card-text">
+          <p>{block.content?.slice(0, 300)}</p>
+        </div>
+      );
+    }
+    if (block.class === 'Link') {
+      return (
+        <div className="block-card-link">
+          <svg width="20" height="20" viewBox="0 0 14 14" fill="none">
+            <path d="M5.5 8.5l3-3M6 3.5L7.5 2a2.83 2.83 0 114 4L10 7.5M8 10.5L6.5 12a2.83 2.83 0 11-4-4L4 6.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+          </svg>
+          <span className="block-card-link-title">{block.source?.title || block.title || 'Link'}</span>
+          {block.source?.url && (
+            <span className="block-card-link-host">{new URL(block.source.url).hostname}</span>
+          )}
+        </div>
+      );
+    }
+    return (
+      <div className="block-card-fallback">
+        <span>{block.class}</span>
+      </div>
+    );
+  };
+
   return (
     <div className="block-card" onClick={onClick}>
       <div className="block-card-visual">
-        {block.image ? (
-          <>
-            {!imgLoaded && <div className="block-card-placeholder" />}
-            <img
-              src={block.image.display.url}
-              alt={block.title || ''}
-              loading="lazy"
-              onLoad={() => setImgLoaded(true)}
-              style={imgLoaded ? undefined : { opacity: 0, position: 'absolute' }}
-            />
-          </>
-        ) : block.class === 'Text' ? (
-          <div className="block-card-text">
-            <p>{block.content?.slice(0, 200)}</p>
-          </div>
-        ) : block.class === 'Link' ? (
-          <div className="block-card-link">
-            <svg width="16" height="16" viewBox="0 0 14 14" fill="none">
-              <path d="M5.5 8.5l3-3M6 3.5L7.5 2a2.83 2.83 0 114 4L10 7.5M8 10.5L6.5 12a2.83 2.83 0 11-4-4L4 6.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-            </svg>
-            <span>{block.source?.title || block.title || 'Link'}</span>
-          </div>
-        ) : (
-          <div className="block-card-fallback">
-            <span>{block.class}</span>
-          </div>
-        )}
+        {renderVisual()}
       </div>
       <div className="block-card-meta">
-        <span className="block-card-channel">{channelTitle}</span>
-        {block.title && (
-          <span className="block-card-title">{block.title}</span>
+        <span className="block-card-channel">
+          <span className="channel-dot" style={{ background: color }} />
+          {channelTitle}
+        </span>
+        {displayTitle && (
+          <span className="block-card-title">{displayTitle}</span>
         )}
         {categories && categories.length > 0 && (
           <div className="block-card-cats">
@@ -171,6 +238,16 @@ const gridStyles = `
     font-size: 12px;
   }
 
+  /* Channel color dot */
+  .channel-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Grid card */
   .block-card {
     break-inside: avoid;
     margin-bottom: 16px;
@@ -216,6 +293,12 @@ const gridStyles = `
     color: var(--text-secondary);
     min-height: 80px;
   }
+  .block-card-text p {
+    display: -webkit-box;
+    -webkit-line-clamp: 10;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
   .block-card-link {
     display: flex;
     flex-direction: column;
@@ -223,12 +306,20 @@ const gridStyles = `
     justify-content: center;
     gap: 8px;
     color: var(--text-muted);
-    font-size: 11px;
-    padding: 24px 16px;
+    padding: 28px 16px;
     text-align: center;
-    word-break: break-all;
-    line-height: 1.5;
-    min-height: 80px;
+    min-height: 100px;
+  }
+  .block-card-link-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.4;
+    word-break: break-word;
+  }
+  .block-card-link-host {
+    font-size: 10px;
+    color: var(--text-muted);
   }
   .block-card-fallback {
     display: flex;
@@ -242,6 +333,7 @@ const gridStyles = `
     min-height: 80px;
   }
 
+  /* Card meta */
   .block-card-meta {
     padding: 10px 12px;
     display: flex;
@@ -254,10 +346,13 @@ const gridStyles = `
     color: var(--text-muted);
     letter-spacing: 0.3px;
     text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 5px;
   }
   .block-card-title {
     font-size: 12px;
-    color: var(--text);
+    color: var(--text-secondary);
     line-height: 1.4;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -279,6 +374,7 @@ const gridStyles = `
     letter-spacing: 0.2px;
   }
 
+  /* List item */
   .block-list-item {
     display: flex;
     align-items: center;
@@ -301,6 +397,10 @@ const gridStyles = `
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+  .block-list-thumb-lg {
+    width: 56px;
+    height: 56px;
   }
   .block-list-thumb img {
     width: 100%;
@@ -329,6 +429,9 @@ const gridStyles = `
   .block-list-channel {
     font-size: 11px;
     color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
   }
   .block-list-cat {
     font-size: 10px;
@@ -365,6 +468,10 @@ const gridStyles = `
     .block-list-thumb {
       width: 36px;
       height: 36px;
+    }
+    .block-list-thumb-lg {
+      width: 48px;
+      height: 48px;
     }
   }
 `;
