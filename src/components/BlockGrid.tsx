@@ -1,4 +1,4 @@
-import { useState, memo, useMemo, useRef, useCallback } from 'react';
+import { useState, memo, useMemo } from 'react';
 import type { ArenaBlock } from '../types';
 import { BlockDetail } from './BlockDetail';
 
@@ -45,12 +45,6 @@ function channelColorSoft(name: string, alpha: number): string {
 
 export function BlockGrid({ blocks, loading, categoryAssignments, categories }: Props) {
   const [selectedBlock, setSelectedBlock] = useState<{ block: ArenaBlock; channelTitle: string } | null>(null);
-  const sectionRefs = useRef<Map<string, HTMLElement>>(new Map());
-
-  const scrollToSection = useCallback((cat: string) => {
-    const el = sectionRefs.current.get(cat);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, []);
 
   const groupedBlocks = useMemo(() => {
     if (!categories || !categoryAssignments) return null;
@@ -85,20 +79,11 @@ export function BlockGrid({ blocks, loading, categoryAssignments, categories }: 
   if (groupedBlocks) {
     return (
       <>
-        <div className="curated-toc">
-          {[...groupedBlocks.keys()].map((cat) => (
-            <button key={cat} className="curated-toc-item" onClick={() => scrollToSection(cat)}>
-              <span className="curated-toc-name">{cat}</span>
-              <span className="curated-toc-count">{groupedBlocks.get(cat)?.length}</span>
-            </button>
-          ))}
-        </div>
         <div className="curated-sections">
           {[...groupedBlocks.entries()].map(([cat, items]) => (
             <section
               key={cat}
               className="curated-section"
-              ref={(el) => { if (el) sectionRefs.current.set(cat, el); }}
             >
               <div className="curated-section-header">
                 <h2 className="curated-section-title">{cat}</h2>
@@ -214,9 +199,10 @@ const BlockCard = memo(function BlockCard({
       return (
         <div className="card-link" style={{ borderLeftColor: color }}>
           <span className="card-link-title">{block.source?.title || block.title || 'Link'}</span>
-          {block.source?.url && (
-            <span className="card-link-domain">{new URL(block.source.url).hostname}</span>
-          )}
+          {block.source?.url && (() => {
+            try { return <span className="card-link-domain">{new URL(block.source!.url).hostname}</span>; }
+            catch { return null; }
+          })()}
         </div>
       );
     }
@@ -290,6 +276,8 @@ const gridStyles = `
     height: auto;
     display: block;
     transition: opacity var(--transition-slow);
+    background: var(--border-light);
+    min-height: 60px;
   }
   /* Text blocks — typographic treatment */
   .card-text {
@@ -423,47 +411,6 @@ const gridStyles = `
     overflow: hidden;
   }
 
-  /* Curated table of contents */
-  .curated-toc {
-    display: flex;
-    gap: 6px;
-    padding: 14px 28px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    border-bottom: 1px solid var(--border-light);
-    background: var(--bg);
-    position: sticky;
-    top: 88px;
-    z-index: 40;
-  }
-  .curated-toc::-webkit-scrollbar { display: none; }
-  .curated-toc-item {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 11px;
-    color: var(--text-muted);
-    white-space: nowrap;
-    padding: 4px 10px;
-    border-radius: var(--radius);
-    transition: all var(--transition-fast);
-    background: var(--accent-soft);
-  }
-  .curated-toc-item:hover {
-    color: var(--text);
-    background: var(--tag-bg);
-  }
-  .curated-toc-count {
-    font-size: 9px;
-    opacity: 0.6;
-    font-variant-numeric: tabular-nums;
-  }
-  .curated-toc-name {
-    font-family: var(--font-serif);
-    font-style: italic;
-    font-size: 12px;
-  }
-
   /* Curated sections */
   .curated-sections {
     padding: 0 28px 80px;
@@ -545,10 +492,5 @@ const gridStyles = `
     }
     .curated-grid .card-visual img { aspect-ratio: 1/1; }
     .curated-grid .card-info { text-align: center; align-items: center; }
-    .curated-toc {
-      padding: 10px 12px;
-      gap: 4px;
-      top: 82px;
-    }
   }
 `;
