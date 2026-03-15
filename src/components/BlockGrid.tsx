@@ -348,12 +348,12 @@ const gridStyles = `
 
   @media (max-width: 768px) {
     .block-grid.grid {
-      columns: 2;
-      column-gap: 8px;
-      padding: 8px;
+      columns: 1;
+      column-gap: 0;
+      padding: 8px 12px;
     }
     .block-card {
-      margin-bottom: 8px;
+      margin-bottom: 12px;
     }
     .block-card-meta {
       padding: 8px 10px;
@@ -365,12 +365,6 @@ const gridStyles = `
     .block-list-thumb {
       width: 36px;
       height: 36px;
-    }
-  }
-  @media (max-width: 480px) {
-    .block-grid.grid {
-      columns: 1;
-      padding: 8px;
     }
   }
 `;

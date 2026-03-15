@@ -8,11 +8,12 @@ interface BlockMeta {
 
 export interface CategoryResult {
   categories: string[];
-  assignments: Record<string, string[]>; // blockId -> category names
+  assignments: Record<string, string[]>;
 }
 
 const CACHE_KEY = 'arena_categories';
-const PROXY_URL = '/api/anthropic/v1/messages';
+const API_URL = 'https://api.anthropic.com/v1/messages';
+const API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY || '';
 
 function getCachedCategories(): CategoryResult | null {
   try {
@@ -41,7 +42,10 @@ export async function categorizeBlocks(
     if (cached) return cached;
   }
 
-  // Limit to 200 blocks for token efficiency
+  if (!API_KEY) {
+    throw new Error('Anthropic API key not configured');
+  }
+
   const subset = blocks.slice(0, 200);
 
   const blockList = subset.map(b => {
@@ -66,9 +70,14 @@ ${blockList}
 Return ONLY valid JSON (no markdown, no explanation):
 {"categories":["Category One","Category Two",...],"assignments":{"blockId":["Category One"],"blockId2":["Category One","Category Two"],...}}`;
 
-  const response = await fetch(PROXY_URL, {
+  const response = await fetch(API_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': API_KEY,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 8192,
@@ -78,19 +87,17 @@ Return ONLY valid JSON (no markdown, no explanation):
 
   if (!response.ok) {
     const body = await response.text().catch(() => '');
-    throw new Error(`Categorization failed: ${response.status} ${body}`);
+    throw new Error(`API ${response.status}: ${body.slice(0, 200)}`);
   }
 
   const data = await response.json();
   const text = data.content[0].text;
 
-  // Extract JSON from response (handle potential markdown wrapping)
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('Invalid response format');
 
   const result: CategoryResult = JSON.parse(jsonMatch[0]);
 
-  // Validate
   if (!result.categories || !result.assignments) {
     throw new Error('Invalid category data');
   }

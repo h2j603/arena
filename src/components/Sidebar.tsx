@@ -325,14 +325,13 @@ const sidebarStyles = `
   .mobile-menu-btn {
     display: none;
     position: fixed;
-    top: 10px;
+    top: 11px;
     left: 10px;
     z-index: 90;
-    padding: 8px;
+    padding: 6px;
     border-radius: var(--radius);
-    background: var(--bg-card);
-    box-shadow: var(--shadow);
     color: var(--text);
+    background: transparent;
   }
   .mobile-sidebar-backdrop {
     display: none;

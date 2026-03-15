@@ -326,29 +326,48 @@ export function Header({
         }
 
         @media (max-width: 768px) {
+          .header {
+            padding-top: 0;
+          }
           .header-top {
-            padding: 10px 12px;
+            padding: 10px 12px 10px 52px;
             flex-wrap: wrap;
-            gap: 8px;
+            gap: 6px;
+          }
+          .header-left {
+            width: 100%;
+            order: 1;
+          }
+          .header-title {
+            font-size: 13px;
           }
           .header-center {
             order: 3;
             width: 100%;
             justify-content: flex-start;
             overflow-x: auto;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+          }
+          .header-center::-webkit-scrollbar {
+            display: none;
           }
           .header-filters {
             flex-wrap: nowrap;
           }
+          .header-right {
+            order: 2;
+            width: 100%;
+          }
           .header-search {
-            width: 100px;
             flex: 1;
+            width: auto;
           }
           .header-search:focus {
-            width: 100px;
+            width: auto;
           }
           .header-categories {
-            padding: 0 12px 8px;
+            padding: 0 12px 8px 52px;
           }
         }
       `}</style>
