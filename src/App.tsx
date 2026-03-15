@@ -287,7 +287,6 @@ function App() {
           blocks={blocks}
           loading={loadingBlocks && blocks.length === 0}
           categoryAssignments={categoryAssignments}
-          categories={categoryNames}
         />
       </main>
     </div>

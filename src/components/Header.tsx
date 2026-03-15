@@ -1,5 +1,4 @@
 import { useRef, useEffect } from 'react';
-import { FIXED_CATEGORIES } from '../categorize';
 
 interface Props {
   searchQuery: string;
@@ -53,7 +52,7 @@ export function Header({
     }
   }, [selectedCategory]);
 
-  const displayCategories = categories || [...FIXED_CATEGORIES];
+  const displayCategories = categories || [];
   const isLoaded = categories !== null;
 
   return (
@@ -291,22 +290,20 @@ const headerStyles = `
 
   .cat-tab {
     font-size: 11px;
-    padding: 4px 12px;
+    padding: 6px 10px 4px;
     color: var(--text-muted);
     white-space: nowrap;
-    border-radius: 20px;
-    transition: all var(--transition-fast);
+    transition: color var(--transition-fast);
     letter-spacing: 0.1px;
     flex-shrink: 0;
+    border-bottom: 1.5px solid transparent;
   }
   .cat-tab:hover:not(:disabled) {
     color: var(--text-secondary);
-    background: var(--accent-soft);
   }
   .cat-tab.active {
-    color: var(--tag-active-text);
-    background: var(--tag-active);
-    font-weight: 500;
+    color: var(--text);
+    border-bottom-color: var(--text);
   }
   .cat-tab--pending {
     opacity: 0.35;
