@@ -49,8 +49,8 @@ export function GraphView({ blocks, categoryAssignments, onSelectBlock }: Props)
   const dragRef = useRef<{ node: GNode | null; startX: number; startY: number; isDragging: boolean }>({
     node: null, startX: 0, startY: 0, isDragging: false,
   });
-  const panRef = useRef<{ active: boolean; lastX: number; lastY: number }>({
-    active: false, lastX: 0, lastY: 0,
+  const panRef = useRef<{ active: boolean; lastX: number; lastY: number; moved: boolean }>({
+    active: false, lastX: 0, lastY: 0, moved: false,
   });
   const hoveredRef = useRef<GNode | null>(null);
   const rafRef = useRef<number>(0);
@@ -141,11 +141,12 @@ export function GraphView({ blocks, categoryAssignments, onSelectBlock }: Props)
     const rect = canvas.getBoundingClientRect();
     transformRef.current = { x: rect.width / 2, y: rect.height / 2, k: 1 };
 
+    const isMobile = window.innerWidth < 768;
     const sim = forceSimulation<GNode>(nodes)
-      .force('link', forceLink<GNode, GLink>(links).id((d) => d.id).distance(80).strength((d) => d.shared * 0.3))
-      .force('charge', forceManyBody().strength(-120))
+      .force('link', forceLink<GNode, GLink>(links).id((d) => d.id).distance(isMobile ? 40 : 80).strength((d) => d.shared * 0.3))
+      .force('charge', forceManyBody().strength(isMobile ? -50 : -120))
       .force('center', forceCenter(0, 0))
-      .force('collide', forceCollide<GNode>(24))
+      .force('collide', forceCollide<GNode>(isMobile ? 16 : 24))
       .alphaDecay(0.02);
 
     simRef.current = sim;
@@ -303,7 +304,7 @@ export function GraphView({ blocks, categoryAssignments, onSelectBlock }: Props)
       node.fy = node.y;
       simRef.current?.alphaTarget(0.3).restart();
     } else {
-      panRef.current = { active: true, lastX: e.clientX, lastY: e.clientY };
+      panRef.current = { active: true, lastX: e.clientX, lastY: e.clientY, moved: false };
     }
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
   }, [findNode]);
@@ -325,6 +326,7 @@ export function GraphView({ blocks, categoryAssignments, onSelectBlock }: Props)
     if (panRef.current.active) {
       const dx = e.clientX - panRef.current.lastX;
       const dy = e.clientY - panRef.current.lastY;
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) panRef.current.moved = true;
       transformRef.current.x += dx;
       transformRef.current.y += dy;
       panRef.current.lastX = e.clientX;
@@ -357,7 +359,6 @@ export function GraphView({ blocks, categoryAssignments, onSelectBlock }: Props)
   const handlePointerUp = useCallback(() => {
     if (dragRef.current.node) {
       if (!dragRef.current.isDragging) {
-        // Click — select block
         const node = dragRef.current.node;
         onSelectBlock({ block: node.block, channelTitle: node.channelTitle });
       }
@@ -365,8 +366,11 @@ export function GraphView({ blocks, categoryAssignments, onSelectBlock }: Props)
       dragRef.current.node.fy = null;
       simRef.current?.alphaTarget(0);
       dragRef.current = { node: null, startX: 0, startY: 0, isDragging: false };
+    } else if (panRef.current.active && !panRef.current.moved) {
+      // Background click (no drag) — deselect
+      onSelectBlock(null as unknown as { block: ArenaBlock; channelTitle: string });
     }
-    panRef.current.active = false;
+    panRef.current = { active: false, lastX: 0, lastY: 0, moved: false };
   }, [onSelectBlock]);
 
   // Native wheel listener (must be non-passive to preventDefault)

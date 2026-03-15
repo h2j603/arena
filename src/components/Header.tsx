@@ -38,8 +38,6 @@ export function Header({
   totalBlocks,
   selectedChannelTitle,
   categories,
-  selectedCategory,
-  onSelectCategory,
   onCategorize,
   onClearCategories,
   isCategorizing,
@@ -92,17 +90,6 @@ export function Header({
               </svg>
             </button>
             <button
-              className={`view-btn ${viewMode === 'list' ? 'active' : ''}`}
-              onClick={() => onViewModeChange('list')}
-              title="List view"
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <line x1="1" y1="3" x2="13" y2="3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-                <line x1="1" y1="7" x2="13" y2="7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-                <line x1="1" y1="11" x2="13" y2="11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-              </svg>
-            </button>
-            <button
               className={`view-btn ${viewMode === 'graph' ? 'active' : ''}`}
               onClick={() => onViewModeChange('graph')}
               title="Graph view"
@@ -120,50 +107,26 @@ export function Header({
         </div>
       </div>
 
-      {/* AI Categories */}
+      {/* AI Categorize action */}
       {(hasBlocks || categories) && (
         <div className="header-categories">
-          {!categories && (
+          {!categories ? (
             <>
               <button
                 className="categorize-btn"
                 onClick={onCategorize}
                 disabled={isCategorizing}
               >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M7 1l1.5 3.5L12 6l-3.5 1.5L7 11l-1.5-3.5L2 6l3.5-1.5L7 1z" stroke="currentColor" strokeWidth="1" fill="currentColor" fillOpacity="0.15"/>
-                </svg>
-                {isCategorizing ? 'Analyzing...' : 'Categorize with AI'}
+                {isCategorizing ? 'Curating...' : 'Curate'}
               </button>
               {categorizeError && (
-                <span className="categorize-error">Failed: {categorizeError.slice(0, 60)}</span>
+                <span className="categorize-error">{categorizeError.slice(0, 60)}</span>
               )}
             </>
-          )}
-
-          {categories && (
-            <>
-              <button
-                className={`category-tag ${selectedCategory === null ? 'active' : ''}`}
-                onClick={() => onSelectCategory(null)}
-              >
-                All
-              </button>
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  className={`category-tag ${selectedCategory === cat ? 'active' : ''}`}
-                  onClick={() => onSelectCategory(selectedCategory === cat ? null : cat)}
-                >
-                  {cat}
-                </button>
-              ))}
-              <button className="clear-categories" onClick={onClearCategories} title="Clear categories">
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                </svg>
-              </button>
-            </>
+          ) : (
+            <button className="clear-categories" onClick={onClearCategories}>
+              Reset curation
+            </button>
           )}
         </div>
       )}
@@ -198,12 +161,12 @@ export function Header({
         .header-count {
           font-size: 11px;
           color: var(--text-muted);
-          font-weight: 400;
         }
         .header-center {
           flex: 1;
           display: flex;
           justify-content: center;
+          min-width: 0;
         }
         .header-filters {
           display: flex;
@@ -211,16 +174,13 @@ export function Header({
         }
         .filter-tag {
           padding: 4px 10px;
-          border-radius: 2px;
           font-size: 11px;
           color: var(--text-muted);
           letter-spacing: 0.3px;
           text-transform: uppercase;
           transition: color 0.15s;
         }
-        .filter-tag:hover {
-          color: var(--text);
-        }
+        .filter-tag:hover { color: var(--text); }
         .filter-tag.active {
           color: var(--text);
           font-weight: 500;
@@ -245,9 +205,7 @@ export function Header({
           width: 140px;
           transition: border-color 0.2s, width 0.2s;
         }
-        .header-search::placeholder {
-          color: var(--text-muted);
-        }
+        .header-search::placeholder { color: var(--text-muted); }
         .header-search:focus {
           border-color: var(--text);
           width: 180px;
@@ -265,77 +223,30 @@ export function Header({
           color: var(--text-muted);
           transition: color 0.15s;
         }
-        .view-btn.active {
-          color: var(--text);
-        }
+        .view-btn.active { color: var(--text); }
 
-        /* AI Categories row */
         .header-categories {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 0 24px 12px;
-          overflow-x: auto;
-          scrollbar-width: none;
-          -webkit-overflow-scrolling: touch;
-        }
-        .header-categories::-webkit-scrollbar {
-          display: none;
+          padding: 0 24px 10px;
         }
         .categorize-btn {
-          display: flex;
-          align-items: center;
-          gap: 5px;
-          padding: 0;
           font-size: 11px;
           color: var(--text-muted);
-          border: none;
-          background: none;
-          transition: color 0.15s;
-          white-space: nowrap;
-          text-transform: uppercase;
           letter-spacing: 0.3px;
-        }
-        .categorize-btn:hover:not(:disabled) {
-          color: var(--text);
-        }
-        .categorize-btn:disabled {
-          opacity: 0.5;
-          cursor: wait;
-        }
-        .category-tag {
-          padding: 0;
-          font-size: 12px;
-          color: var(--text-muted);
-          background: none;
+          text-transform: uppercase;
           transition: color 0.15s;
-          white-space: nowrap;
-          border: none;
         }
-        .category-tag:hover {
-          color: var(--text);
-        }
-        .category-tag.active {
-          color: var(--text);
-          font-weight: 500;
-          text-decoration: underline;
-          text-underline-offset: 3px;
-        }
+        .categorize-btn:hover:not(:disabled) { color: var(--text); }
+        .categorize-btn:disabled { opacity: 0.5; cursor: wait; }
         .clear-categories {
-          padding: 2px;
+          font-size: 11px;
           color: var(--text-muted);
-          display: flex;
-          align-items: center;
           transition: color 0.15s;
-          flex-shrink: 0;
         }
-        .clear-categories:hover {
-          color: var(--text);
-        }
+        .clear-categories:hover { color: var(--text); }
         .categorize-error {
           font-size: 11px;
           color: #b55;
-          white-space: nowrap;
+          margin-left: 8px;
         }
 
         @media (max-width: 768px) {
@@ -344,38 +255,20 @@ export function Header({
             flex-wrap: wrap;
             gap: 6px;
           }
-          .header-left {
-            width: 100%;
-            order: 1;
-          }
-          .header-title {
-            font-size: 17px;
-          }
+          .header-left { width: 100%; order: 1; }
+          .header-title { font-size: 17px; }
           .header-center {
             order: 3;
             width: 100%;
             justify-content: flex-start;
             overflow-x: auto;
             scrollbar-width: none;
-            -webkit-overflow-scrolling: touch;
           }
-          .header-center::-webkit-scrollbar {
-            display: none;
-          }
-          .header-right {
-            order: 2;
-            width: 100%;
-          }
-          .header-search {
-            flex: 1;
-            width: auto;
-          }
-          .header-search:focus {
-            width: auto;
-          }
-          .header-categories {
-            padding: 0 12px 8px 52px;
-          }
+          .header-center::-webkit-scrollbar { display: none; }
+          .header-right { order: 2; width: 100%; }
+          .header-search { flex: 1; width: auto; }
+          .header-search:focus { width: auto; }
+          .header-categories { padding: 0 12px 8px 52px; }
         }
       `}</style>
     </header>

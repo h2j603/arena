@@ -4,13 +4,11 @@ interface BlockMeta {
   type: string;
   description: string | null;
   channelTitle: string;
-  imageUrl: string | null;
 }
 
 export interface CategoryResult {
   categories: string[];
   assignments: Record<string, string[]>;
-  descriptions: Record<string, string>;
 }
 
 const CACHE_KEY = 'arena_categories';
@@ -42,62 +40,28 @@ export async function categorizeBlocks(
     if (cached) return cached;
   }
 
-  // Split into image blocks (vision) and text-only blocks
-  const imageBlocks = blocks.filter((b) => b.imageUrl);
-  const textBlocks = blocks.filter((b) => !b.imageUrl);
-
-  // Send up to 40 images via vision, rest as text metadata
-  const visionBlocks = imageBlocks.slice(0, 40);
-  const remainingImageBlocks = imageBlocks.slice(40);
-
-  const content: Array<Record<string, unknown>> = [];
-  const nonImageParts: string[] = [];
-
-  for (const b of visionBlocks) {
-    content.push({
-      type: 'image',
-      source: { type: 'url', url: b.imageUrl },
-    });
-    content.push({
-      type: 'text',
-      text: `[Block ${b.id}: "${b.title || 'Untitled'}" — ch: "${b.channelTitle}"]`,
-    });
-  }
-
-  // Remaining image blocks as text only
-  for (const b of remainingImageBlocks) {
+  // Text-only metadata — no images, fast
+  const blockList = blocks.map((b) => {
     const title = b.title || 'Untitled';
-    const desc = b.description ? ` | ${b.description.slice(0, 80)}` : '';
-    nonImageParts.push(`${b.id}: [Image] "${title}" (ch: ${b.channelTitle})${desc}`);
-  }
+    const desc = b.description ? ` — ${b.description.slice(0, 60)}` : '';
+    return `${b.id}: [${b.type}] "${title}" (ch: ${b.channelTitle})${desc}`;
+  }).join('\n');
 
-  for (const b of textBlocks) {
-    const title = b.title || 'Untitled';
-    const desc = b.description ? ` | ${b.description.slice(0, 80)}` : '';
-    nonImageParts.push(`${b.id}: [${b.type}] "${title}" (ch: ${b.channelTitle})${desc}`);
-  }
+  const prompt = `You are a creative art curator organizing a personal Are.na archive into an exhibition.
 
-  const promptText = `You are a creative art curator with a poetic sensibility. Above are images and references from a personal inspiration archive on Are.na.
+References:
+${blockList}
 
-Your task:
-1. LOOK at each image carefully — analyze colors, composition, subject, mood, texture, style
-2. Create evocative, artistic CATEGORIES to group ALL references based on what you actually SEE
-3. Write a brief visual DESCRIPTION for each image block (what you see, the mood, the aesthetic)
+Create 8-12 evocative categories and assign every reference to 1-2 categories.
 
-${nonImageParts.length > 0 ? `Non-image references:\n${nonImageParts.join('\n')}\n` : ''}
-Guidelines for categories:
-- Create 6-15 categories depending on the diversity of content
-- Category names should be poetic, evocative, and specific — not generic
-- Think like an art curator naming sections of an exhibition
-- Base categories on VISUAL content you actually see, not just titles/metadata
-- Examples: "Light & Atmosphere", "Digital Rituals", "Sonic Textures", "Found Typography", "Organic Machines", "Color Fields", "Invisible Systems", "Body & Space"
-- Each reference should be assigned to 1-2 categories
-- Categories should feel cohesive but surprising
+Category naming guidelines:
+- Poetic, specific, editorial — NOT generic (not "Design", "Art", "Misc")
+- Think exhibition section titles: "Systematic Color", "Found Typography", "Quiet Structures", "Digital Rituals"
+- Based on themes you infer from titles, channels, and descriptions
+- Every reference MUST be assigned
 
-Return ONLY valid JSON (no markdown, no explanation):
-{"categories":["Category One","Category Two",...],"assignments":{"blockId":["Category One"],...},"descriptions":{"blockId":"Brief visual description of what you see in this image",...}}`;
-
-  content.push({ type: 'text', text: promptText });
+Return ONLY valid JSON:
+{"categories":["Category One","Category Two",...],"assignments":{"blockId":["Category One"],...}}`;
 
   const response = await fetch('/api/categorize', {
     method: 'POST',
@@ -105,7 +69,7 @@ Return ONLY valid JSON (no markdown, no explanation):
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 8192,
-      messages: [{ role: 'user', content }],
+      messages: [{ role: 'user', content: prompt }],
     }),
   });
 
@@ -124,7 +88,6 @@ Return ONLY valid JSON (no markdown, no explanation):
   const result: CategoryResult = {
     categories: parsed.categories || [],
     assignments: parsed.assignments || {},
-    descriptions: parsed.descriptions || {},
   };
 
   if (!result.categories.length) {

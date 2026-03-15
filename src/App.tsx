@@ -133,8 +133,7 @@ function App() {
           const desc = (item.block.description || '').toLowerCase();
           const content = (item.block.content || '').toLowerCase();
           const sourceTitle = (item.block.source?.title || '').toLowerCase();
-          const visionDesc = (categoryResult?.descriptions?.[String(item.block.id)] || '').toLowerCase();
-          return title.includes(q) || desc.includes(q) || content.includes(q) || sourceTitle.includes(q) || visionDesc.includes(q);
+          return title.includes(q) || desc.includes(q) || content.includes(q) || sourceTitle.includes(q);
         }
         return true;
       })
@@ -168,7 +167,7 @@ function App() {
     setIsCategorizing(true);
     setCategorizeError(null);
     try {
-      const allBlocks: { id: number; title: string | null; type: string; description: string | null; channelTitle: string; imageUrl: string | null }[] = [];
+      const allBlocks: { id: number; title: string | null; type: string; description: string | null; channelTitle: string }[] = [];
       channelDataRef.current.forEach((data) => {
         data.blocks.forEach((b) => {
           allBlocks.push({
@@ -177,7 +176,6 @@ function App() {
             type: b.class,
             description: b.description,
             channelTitle: data.channel.title,
-            imageUrl: b.image?.thumb?.url || null,
           });
         });
       });
@@ -259,12 +257,11 @@ function App() {
           <GraphView
             blocks={blocks}
             categoryAssignments={categoryAssignments}
-            onSelectBlock={setGraphSelectedBlock}
+            onSelectBlock={(item) => setGraphSelectedBlock(item || null)}
           />
         ) : (
           <BlockGrid
             blocks={blocks}
-            viewMode={viewMode}
             loading={loadingBlocks && blocks.length === 0}
             categoryAssignments={categoryAssignments}
             categories={categoryNames}

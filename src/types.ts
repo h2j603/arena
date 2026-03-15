@@ -35,4 +35,4 @@ export interface ArenaChannel {
   metadata: { description: string | null } | null;
 }
 
-export type ViewMode = 'grid' | 'list' | 'graph';
+export type ViewMode = 'grid' | 'graph';
