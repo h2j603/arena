@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getSlug, getToken, getUserChannels, getChannelContents } from './api';
+import { getSlug, getUserChannels, getChannelContents } from './api';
+import { categorizeBlocks, clearCategoryCache } from './categorize';
 import type { ArenaChannel, ArenaBlock, ViewMode } from './types';
+import type { CategoryResult } from './categorize';
 import { Sidebar } from './components/Sidebar';
 import { BlockGrid } from './components/BlockGrid';
 import { Header } from './components/Header';
@@ -9,6 +11,18 @@ import './App.css';
 interface ChannelData {
   channel: ArenaChannel;
   blocks: ArenaBlock[];
+}
+
+function getHiddenChannels(): Set<string> {
+  try {
+    const raw = localStorage.getItem('arena_hidden_channels');
+    if (raw) return new Set(JSON.parse(raw));
+  } catch { /* ignore */ }
+  return new Set();
+}
+
+function saveHiddenChannels(set: Set<string>) {
+  localStorage.setItem('arena_hidden_channels', JSON.stringify([...set]));
 }
 
 function App() {
@@ -22,18 +36,19 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [blockTypeFilter, setBlockTypeFilter] = useState<string>('all');
   const [error, setError] = useState<string | null>(null);
-  const [debug, setDebug] = useState(`slug: "${username}" | token: "${getToken() ? getToken().slice(0, 8) + '...' : '(empty)'}"`);
+  const [hiddenChannels, setHiddenChannels] = useState<Set<string>>(getHiddenChannels);
+  const [categoryResult, setCategoryResult] = useState<CategoryResult | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [isCategorizing, setIsCategorizing] = useState(false);
 
   const loadChannels = useCallback(async (slug: string) => {
     try {
       setLoading(true);
       setError(null);
       const ch = await getUserChannels(slug);
-      setDebug(prev => prev + ` | channels: ${ch.length}`);
       setChannels(ch);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Unknown error';
-      setDebug(prev => prev + ` | ERROR: ${msg}`);
       setError(`Failed to load: ${msg}`);
     } finally {
       setLoading(false);
@@ -41,7 +56,6 @@ function App() {
   }, []);
 
   useEffect(() => {
-    console.log('[arena] slug:', username, 'token:', !!getSlug());
     if (username) {
       loadChannels(username);
     }
@@ -65,7 +79,19 @@ function App() {
     if (slug) loadChannel(slug);
   };
 
-  // Get all blocks across all loaded channels, or from selected channel
+  const handleToggleHidden = (slug: string) => {
+    setHiddenChannels(prev => {
+      const next = new Set(prev);
+      if (next.has(slug)) {
+        next.delete(slug);
+      } else {
+        next.add(slug);
+      }
+      saveHiddenChannels(next);
+      return next;
+    });
+  };
+
   const getAllBlocks = (): { block: ArenaBlock; channelTitle: string }[] => {
     const results: { block: ArenaBlock; channelTitle: string }[] = [];
 
@@ -75,7 +101,8 @@ function App() {
         data.blocks.forEach((b) => results.push({ block: b, channelTitle: data.channel.title }));
       }
     } else {
-      channelData.forEach((data) => {
+      channelData.forEach((data, slug) => {
+        if (hiddenChannels.has(slug)) return;
         data.blocks.forEach((b) => results.push({ block: b, channelTitle: data.channel.title }));
       });
     }
@@ -83,6 +110,10 @@ function App() {
     return results
       .filter((item) => {
         if (blockTypeFilter !== 'all' && item.block.class.toLowerCase() !== blockTypeFilter) return false;
+        if (selectedCategory && categoryResult) {
+          const assigned = categoryResult.assignments[String(item.block.id)];
+          if (!assigned || !assigned.includes(selectedCategory)) return false;
+        }
         if (searchQuery) {
           const q = searchQuery.toLowerCase();
           const title = (item.block.title || '').toLowerCase();
@@ -108,17 +139,40 @@ function App() {
     }
   }, [channels, channelData.size]);
 
-  const debugBar = (
-    <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#111', color: '#0f0', fontSize: 11, padding: '6px 10px', zIndex: 9999, fontFamily: 'monospace', wordBreak: 'break-all' }}>
-      {debug}
-    </div>
-  );
+  const handleCategorize = async () => {
+    setIsCategorizing(true);
+    try {
+      const allBlocks: { id: number; title: string | null; type: string; description: string | null; channelTitle: string }[] = [];
+      channelData.forEach((data) => {
+        data.blocks.forEach((b) => {
+          allBlocks.push({
+            id: b.id,
+            title: b.title,
+            type: b.class,
+            description: b.description,
+            channelTitle: data.channel.title,
+          });
+        });
+      });
+      const result = await categorizeBlocks(allBlocks);
+      setCategoryResult(result);
+    } catch (e) {
+      console.error('Categorization failed:', e);
+    } finally {
+      setIsCategorizing(false);
+    }
+  };
+
+  const handleClearCategories = () => {
+    clearCategoryCache();
+    setCategoryResult(null);
+    setSelectedCategory(null);
+  };
 
   if (error) {
     return (
       <div className="loading-screen">
         <p className="login-error">{error}</p>
-        {debugBar}
       </div>
     );
   }
@@ -126,9 +180,9 @@ function App() {
   if (loading) {
     return (
       <div className="loading-screen">
+        <p className="loading-title">Everything That Inspires</p>
         <div className="loading-spinner" />
-        <p>Loading your Are.na...</p>
-        {debugBar}
+        <p className="loading-sub">Loading your archive...</p>
       </div>
     );
   }
@@ -143,6 +197,8 @@ function App() {
         onSelectChannel={handleSelectChannel}
         username={username}
         loadedChannels={new Set(channelData.keys())}
+        hiddenChannels={hiddenChannels}
+        onToggleHidden={handleToggleHidden}
       />
       <main className="main-content">
         <Header
@@ -154,14 +210,21 @@ function App() {
           onBlockTypeFilterChange={setBlockTypeFilter}
           totalBlocks={blocks.length}
           selectedChannelTitle={selectedChannel ? channelData.get(selectedChannel)?.channel.title : undefined}
+          categories={categoryResult?.categories || null}
+          selectedCategory={selectedCategory}
+          onSelectCategory={setSelectedCategory}
+          onCategorize={handleCategorize}
+          onClearCategories={handleClearCategories}
+          isCategorizing={isCategorizing}
+          hasBlocks={channelData.size > 0}
         />
         <BlockGrid
           blocks={blocks}
           viewMode={viewMode}
           loading={loadingBlocks && blocks.length === 0}
+          categoryAssignments={categoryResult?.assignments || null}
         />
       </main>
-      {debugBar}
     </div>
   );
 }

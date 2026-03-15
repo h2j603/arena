@@ -5,9 +5,10 @@ interface Props {
   block: ArenaBlock;
   channelTitle: string;
   onClose: () => void;
+  categories: string[] | null;
 }
 
-export function BlockDetail({ block, channelTitle, onClose }: Props) {
+export function BlockDetail({ block, channelTitle, onClose, categories }: Props) {
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -77,6 +78,14 @@ export function BlockDetail({ block, channelTitle, onClose }: Props) {
               )}
             </div>
 
+            {categories && categories.length > 0 && (
+              <div className="detail-categories">
+                {categories.map(c => (
+                  <span key={c} className="detail-cat-tag">{c}</span>
+                ))}
+              </div>
+            )}
+
             {block.description && (
               <p className="detail-desc">{block.description}</p>
             )}
@@ -100,21 +109,23 @@ export function BlockDetail({ block, channelTitle, onClose }: Props) {
           position: fixed;
           inset: 0;
           z-index: 200;
-          background: rgba(0,0,0,0.6);
-          backdrop-filter: blur(4px);
+          background: rgba(0,0,0,0.7);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
           display: flex;
           align-items: center;
           justify-content: center;
           padding: 40px;
-          animation: fadeIn 0.2s;
+          animation: fadeIn 0.25s ease;
         }
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
         }
         .detail-modal {
-          background: var(--bg-card);
-          border-radius: 8px;
+          background: var(--bg-surface);
+          border: 1px solid var(--border);
+          border-radius: var(--radius-lg);
           max-width: 800px;
           max-height: 85vh;
           width: 100%;
@@ -122,18 +133,19 @@ export function BlockDetail({ block, channelTitle, onClose }: Props) {
           display: flex;
           flex-direction: column;
           position: relative;
-          box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+          box-shadow: var(--shadow-lg);
         }
         .detail-close {
           position: absolute;
-          top: 12px;
-          right: 12px;
+          top: 14px;
+          right: 14px;
           z-index: 10;
-          padding: 6px;
+          padding: 8px;
           border-radius: 50%;
-          color: var(--text-secondary);
-          background: var(--bg-card);
-          transition: color 0.15s;
+          color: var(--text-muted);
+          background: rgba(0,0,0,0.4);
+          backdrop-filter: blur(4px);
+          transition: color 0.2s;
         }
         .detail-close:hover {
           color: var(--text);
@@ -142,41 +154,44 @@ export function BlockDetail({ block, channelTitle, onClose }: Props) {
           overflow-y: auto;
         }
         .detail-image {
-          background: var(--tag-bg);
+          background: var(--bg);
           display: flex;
           justify-content: center;
+          padding: 0;
         }
         .detail-image img {
           max-width: 100%;
-          max-height: 55vh;
+          max-height: 60vh;
           object-fit: contain;
         }
         .detail-text-content {
-          padding: 24px;
+          padding: 28px;
           font-size: 14px;
-          line-height: 1.7;
+          line-height: 1.8;
           color: var(--text);
           max-height: 50vh;
           overflow-y: auto;
         }
         .detail-meta {
-          padding: 20px 24px 24px;
+          padding: 24px 28px 28px;
         }
         .detail-title {
-          font-size: 16px;
-          font-weight: 600;
-          letter-spacing: -0.3px;
-          margin-bottom: 14px;
+          font-family: var(--font-serif);
+          font-size: 20px;
+          font-weight: 400;
+          letter-spacing: 0.2px;
+          margin-bottom: 16px;
+          color: var(--text);
         }
         .detail-info {
           display: flex;
           flex-direction: column;
-          gap: 6px;
-          margin-bottom: 14px;
+          gap: 8px;
+          margin-bottom: 16px;
         }
         .detail-info-row {
           display: flex;
-          gap: 12px;
+          gap: 14px;
           font-size: 12px;
         }
         .detail-label {
@@ -185,25 +200,44 @@ export function BlockDetail({ block, channelTitle, onClose }: Props) {
           flex-shrink: 0;
         }
         .detail-link {
-          color: var(--text-secondary);
+          color: var(--accent);
           text-decoration: underline;
-          text-underline-offset: 2px;
+          text-underline-offset: 3px;
+          text-decoration-color: rgba(196, 165, 90, 0.3);
+        }
+        .detail-link:hover {
+          text-decoration-color: var(--accent);
+        }
+        .detail-categories {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
+          margin-bottom: 16px;
+        }
+        .detail-cat-tag {
+          font-size: 11px;
+          padding: 3px 10px;
+          border-radius: 12px;
+          background: var(--accent-soft);
+          color: var(--accent);
+          letter-spacing: 0.2px;
         }
         .detail-desc {
-          font-size: 12px;
+          font-size: 13px;
           color: var(--text-secondary);
-          line-height: 1.6;
-          margin-bottom: 16px;
+          line-height: 1.7;
+          margin-bottom: 18px;
         }
         .detail-open-btn {
           display: inline-block;
-          padding: 7px 16px;
+          padding: 8px 18px;
           background: var(--accent);
           color: var(--bg);
           border-radius: var(--radius);
           font-size: 12px;
           font-weight: 500;
           transition: opacity 0.2s;
+          letter-spacing: 0.3px;
         }
         .detail-open-btn:hover {
           opacity: 0.85;
@@ -215,6 +249,9 @@ export function BlockDetail({ block, channelTitle, onClose }: Props) {
           }
           .detail-modal {
             max-height: 90vh;
+          }
+          .detail-meta {
+            padding: 20px;
           }
         }
       `}</style>
