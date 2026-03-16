@@ -1,3 +1,5 @@
+import { pushToCloud } from './sync';
+
 const STORAGE_KEY = 'arena_boards';
 
 export interface Board {
@@ -22,6 +24,7 @@ function load(): Board[] {
 
 function save() {
   if (cache) localStorage.setItem(STORAGE_KEY, JSON.stringify(cache));
+  pushToCloud();
 }
 
 export function getBoards(): Board[] {

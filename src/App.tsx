@@ -4,6 +4,7 @@ import { getSlug, getUserChannels, getChannelContents } from './api';
 import type { ArenaChannel, ArenaBlock } from './types';
 import { getTier } from './tiers';
 import { getBoards, createBoard, deleteBoard, addToBoard, type Board } from './boards';
+import { pullFromCloud, pushToCloud } from './sync';
 import { Sidebar } from './components/Sidebar';
 import { BlockGrid } from './components/BlockGrid';
 import { Header } from './components/Header';
@@ -25,6 +26,7 @@ function getHiddenChannels(): Set<string> {
 
 function saveHiddenChannels(set: Set<string>) {
   localStorage.setItem('arena_hidden_channels', JSON.stringify([...set]));
+  pushToCloud();
 }
 
 function App() {
@@ -69,6 +71,18 @@ function App() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // Sync from Supabase on mount
+  useEffect(() => {
+    pullFromCloud().then((found) => {
+      if (found) {
+        setHiddenChannels(getHiddenChannels());
+        setBoards(getBoards());
+        setTierVersion(v => v + 1);
+        setNoteVersion(v => v + 1);
+      }
+    });
   }, []);
 
   useEffect(() => {
