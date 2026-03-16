@@ -19,6 +19,7 @@ interface Props {
   hasSelectedChannel: boolean;
   viewingBoard?: boolean;
   onExportBoard?: () => void;
+  onRefresh?: () => void;
 }
 
 const BLOCK_TYPES = [
@@ -66,6 +67,7 @@ export function Header({
   hasSelectedChannel,
   viewingBoard,
   onExportBoard,
+  onRefresh,
 }: Props) {
   const [boardName, setBoardName] = useState('');
   const [showNameInput, setShowNameInput] = useState(false);
@@ -142,6 +144,13 @@ export function Header({
                     <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
                   </svg>
                   Add
+                </button>
+              )}
+              {onRefresh && (
+                <button className="header-btn header-btn--refresh" onClick={onRefresh} title="Refresh">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M11.5 7a4.5 4.5 0 11-1.3-3.2M10.2 2v1.8H12" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
                 </button>
               )}
               <div className="search-wrap">
