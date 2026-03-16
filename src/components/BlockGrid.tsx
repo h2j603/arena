@@ -4,6 +4,7 @@ import { BlockDetail } from './BlockDetail';
 import type { Board } from '../boards';
 import { getChannelColor } from '../channelColors';
 import { hasNote } from '../notes';
+import { getTier, TIER_COLORS } from '../tiers';
 
 interface Props {
   blocks: { block: ArenaBlock; channelTitle: string }[];
@@ -17,9 +18,10 @@ interface Props {
   onAddToBoard: (boardId: string, blockId: number) => void;
   noteVersion: number;
   onNoteChange: () => void;
+  tierVersion: number;
 }
 
-export function BlockGrid({ blocks, allBlocks, loading, onTierChange, selectMode, selectedIds, onToggleSelect, boards, onAddToBoard, noteVersion, onNoteChange }: Props) {
+export function BlockGrid({ blocks, allBlocks, loading, onTierChange, selectMode, selectedIds, onToggleSelect, boards, onAddToBoard, noteVersion, onNoteChange, tierVersion }: Props) {
   const [selectedBlock, setSelectedBlock] = useState<{ block: ArenaBlock; channelTitle: string } | null>(null);
 
   if (loading) {
@@ -47,6 +49,7 @@ export function BlockGrid({ blocks, allBlocks, loading, onTierChange, selectMode
             selected={selectMode && selectedIds.has(item.block.id)}
             selectMode={selectMode}
             noteVersion={noteVersion}
+            tierVersion={tierVersion}
           />
         ))}
       </div>
@@ -76,6 +79,7 @@ const BlockCard = memo(function BlockCard({
   selected,
   selectMode,
   noteVersion,
+  tierVersion,
 }: {
   block: ArenaBlock;
   channelTitle: string;
@@ -83,14 +87,16 @@ const BlockCard = memo(function BlockCard({
   selected?: boolean;
   selectMode?: boolean;
   noteVersion?: number;
+  tierVersion?: number;
 }) {
   const [imgLoaded, setImgLoaded] = useState(false);
   const content = block.content || '';
   const isShortText = block.class === 'Text' && content.length < 140;
   const chColor = getChannelColor(channelTitle);
-  // noteVersion is used to trigger re-render when notes change
   void noteVersion;
+  void tierVersion;
   const blockHasNote = hasNote(block.id);
+  const blockTier = getTier(block.id);
 
   const selectCheck = selectMode ? (
     <span className={`b-select ${selected ? 'b-select--on' : ''}`}>
@@ -102,16 +108,20 @@ const BlockCard = memo(function BlockCard({
   if (block.image) {
     return (
       <div className={`b ${selected ? 'b--selected' : ''}`} onClick={onClick}>
-        <img
-          src={block.image.display.url}
-          alt=""
-          loading="lazy"
-          onLoad={() => setImgLoaded(true)}
-          className={`b-img ${imgLoaded ? 'b-img--loaded' : ''}`}
-        />
-        {selectCheck}
-        {blockHasNote && <span className="b-note-dot" title="Has memo" />}
-        <span className="b-ch"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}</span>
+        <div className="b-img-wrap">
+          <img
+            src={block.image.display.url}
+            alt=""
+            loading="lazy"
+            onLoad={() => setImgLoaded(true)}
+            className={`b-img ${imgLoaded ? 'b-img--loaded' : ''}`}
+          />
+          {selectCheck}
+        </div>
+        <div className="b-info">
+          <span className="b-info-ch"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}{blockHasNote && <span className="b-note-inline" />}</span>
+          {blockTier && <span className="b-info-tier" style={{ color: TIER_COLORS[blockTier] }}>{blockTier}</span>}
+        </div>
       </div>
     );
   }
@@ -123,7 +133,10 @@ const BlockCard = memo(function BlockCard({
         {selectCheck}
         <p className="b-text-content">{content.slice(0, isShortText ? 140 : 360)}</p>
         {!isShortText && <div className="b-text-fade" />}
-        <span className="b-ch b-ch--inside"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}{blockHasNote && <span className="b-note-inline" />}</span>
+        <div className="b-info b-info--inside">
+          <span className="b-info-ch"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}{blockHasNote && <span className="b-note-inline" />}</span>
+          {blockTier && <span className="b-info-tier" style={{ color: TIER_COLORS[blockTier] }}>{blockTier}</span>}
+        </div>
       </div>
     );
   }
@@ -139,7 +152,10 @@ const BlockCard = memo(function BlockCard({
         {selectCheck}
         <span className="b-link-title">{block.source?.title || block.title || 'Untitled'}</span>
         {domain && <span className="b-link-domain">{domain}</span>}
-        <span className="b-ch b-ch--inside"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}{blockHasNote && <span className="b-note-inline" />}</span>
+        <div className="b-info b-info--inside">
+          <span className="b-info-ch"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}{blockHasNote && <span className="b-note-inline" />}</span>
+          {blockTier && <span className="b-info-tier" style={{ color: TIER_COLORS[blockTier] }}>{blockTier}</span>}
+        </div>
       </div>
     );
   }
@@ -150,7 +166,10 @@ const BlockCard = memo(function BlockCard({
       {selectCheck}
       <span className="b-fallback-type">{block.class}</span>
       {block.title && <span className="b-fallback-title">{block.title}</span>}
-      <span className="b-ch b-ch--inside"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}{blockHasNote && <span className="b-note-inline" />}</span>
+      <div className="b-info b-info--inside">
+        <span className="b-info-ch"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}{blockHasNote && <span className="b-note-inline" />}</span>
+        {blockTier && <span className="b-info-tier" style={{ color: TIER_COLORS[blockTier] }}>{blockTier}</span>}
+      </div>
     </div>
   );
 });
@@ -237,23 +256,11 @@ const gridStyles = `
   }
   .b-img--loaded { opacity: 1; }
 
-  /* Channel label — appears on hover over image */
-  .b-ch {
-    position: absolute;
-    bottom: 6px;
-    left: 8px;
-    font-size: 9px;
-    letter-spacing: 0.3px;
-    color: rgba(255,255,255,0.85);
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
-    pointer-events: none;
-    max-width: calc(100% - 16px);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  /* Image wrapper */
+  .b-img-wrap {
+    position: relative;
   }
+
   .b-ch-dot {
     width: 5px;
     height: 5px;
@@ -263,18 +270,29 @@ const gridStyles = `
     margin-right: 4px;
     vertical-align: middle;
   }
-  /* Note indicators */
-  .b-note-dot {
-    position: absolute;
-    bottom: 6px;
-    right: 8px;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.75);
-    box-shadow: 0 0 0 1.5px rgba(0,0,0,0.15);
-    z-index: 2;
-    pointer-events: none;
+
+  /* Info row below image */
+  .b-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 2px 0;
+    gap: 6px;
+  }
+  .b-info-ch {
+    font-size: 9px;
+    letter-spacing: 0.3px;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .b-info-tier {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
   }
   .b-note-inline {
     width: 4px;
@@ -287,22 +305,14 @@ const gridStyles = `
     opacity: 0.7;
   }
 
-  .b:hover .b-ch { opacity: 1; }
-
-  /* Channel label inside text/link blocks */
-  .b-ch--inside {
-    position: relative;
-    bottom: auto;
-    left: auto;
-    display: block;
-    color: var(--text-muted);
-    opacity: 0.5;
-    text-shadow: none;
+  /* Info row inside text/link/fallback blocks */
+  .b-info--inside {
     margin-top: 10px;
-    font-size: 9px;
-    letter-spacing: 0.3px;
+    padding: 0;
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
   }
-  .b:hover .b-ch--inside { opacity: 0.8; }
+  .b:hover .b-info--inside { opacity: 0.8; }
 
   /* --- Text block --- */
   .b-text {
@@ -401,7 +411,8 @@ const gridStyles = `
       padding: 10px;
     }
     .b { margin-bottom: 10px; }
-    .b-ch { opacity: 1; font-size: 8px; }
+    .b-info-ch { font-size: 8px; }
+    .b-info-tier { font-size: 9px; }
     .b-text--short { padding: 12px 14px 8px; }
     .b-text--short .b-text-content { font-size: 12px; }
     .b-text--long { padding: 12px 14px 8px; max-height: 160px; }
@@ -409,6 +420,6 @@ const gridStyles = `
     .b-link { padding: 12px 14px 8px; }
     .b-link-title { font-size: 11px; }
     .grid-empty-title { font-size: 18px; }
-    .b-ch--inside { font-size: 8px; margin-top: 6px; }
+    .b-info--inside { margin-top: 6px; }
   }
 `;
