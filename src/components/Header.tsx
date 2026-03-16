@@ -15,6 +15,8 @@ interface Props {
   onCreateBoard: (name: string) => void;
   onShowAddBlock: () => void;
   hasSelectedChannel: boolean;
+  viewingBoard?: boolean;
+  onExportBoard?: () => void;
 }
 
 const BLOCK_TYPES = [
@@ -51,6 +53,8 @@ export function Header({
   onCreateBoard,
   onShowAddBlock,
   hasSelectedChannel,
+  viewingBoard,
+  onExportBoard,
 }: Props) {
   const [boardName, setBoardName] = useState('');
   const [showNameInput, setShowNameInput] = useState(false);
@@ -112,6 +116,15 @@ export function Header({
                 </svg>
                 Board
               </button>
+              {viewingBoard && onExportBoard && (
+                <button className="header-btn" onClick={onExportBoard} title="Save board as PNG">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M2 9v2.5a.5.5 0 00.5.5h9a.5.5 0 00.5-.5V9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                    <path d="M7 2v7M4.5 6.5L7 9l2.5-2.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  PNG
+                </button>
+              )}
               {hasSelectedChannel && (
                 <button className="header-btn" onClick={onShowAddBlock} title="Add a block to this channel">
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
