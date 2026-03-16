@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import html2canvas from 'html2canvas';
 import { getSlug, getUserChannels, getChannelContents } from './api';
 import type { ArenaChannel, ArenaBlock } from './types';
 import { getTier } from './tiers';
@@ -129,6 +130,28 @@ function App() {
     setBoards(getBoards());
     if (viewingBoard === id) setViewingBoard(null);
   }, [viewingBoard]);
+
+  const handleExportBoard = useCallback(async () => {
+    const grid = document.querySelector('.block-grid') as HTMLElement | null;
+    if (!grid) return;
+    const boardName = viewingBoard
+      ? boards.find(b => b.id === viewingBoard)?.name || 'board'
+      : 'board';
+    try {
+      const canvas = await html2canvas(grid, {
+        backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#f5f4f0',
+        useCORS: true,
+        allowTaint: true,
+        scale: 2,
+      });
+      const link = document.createElement('a');
+      link.download = `${boardName.replace(/\s+/g, '-').toLowerCase()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch {
+      // silently fail
+    }
+  }, [viewingBoard, boards]);
 
   const handleAddToBoard = useCallback((boardId: string, blockId: number) => {
     addToBoard(boardId, [blockId]);
@@ -299,6 +322,8 @@ function App() {
           onCreateBoard={handleCreateBoard}
           onShowAddBlock={() => setShowAddBlock(true)}
           hasSelectedChannel={!!selectedChannel}
+          viewingBoard={!!viewingBoard}
+          onExportBoard={handleExportBoard}
         />
         <BlockGrid
           blocks={blocks}
