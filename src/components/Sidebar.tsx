@@ -18,7 +18,7 @@ interface Props {
   onDeleteBoard: (id: string) => void;
 }
 
-export function Sidebar({ channels, selectedChannel, onSelectChannel, username, loadedChannels, hiddenChannels, onToggleHidden, boards, viewingBoard, onViewBoard, onDeleteBoard }: Props) {
+export function Sidebar({ channels, selectedChannel, onSelectChannel, username, loadedChannels: _loadedChannels, hiddenChannels, onToggleHidden, boards, viewingBoard, onViewBoard, onDeleteBoard }: Props) {
   const [search, setSearch] = useState('');
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
