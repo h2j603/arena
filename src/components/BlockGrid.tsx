@@ -1,7 +1,6 @@
 import { useState, memo } from 'react';
 import type { ArenaBlock } from '../types';
 import { BlockDetail } from './BlockDetail';
-import { getTier, TIER_COLORS } from '../tiers';
 import type { Board } from '../boards';
 import { getChannelColor } from '../channelColors';
 
@@ -81,12 +80,7 @@ const BlockCard = memo(function BlockCard({
   const [imgLoaded, setImgLoaded] = useState(false);
   const content = block.content || '';
   const isShortText = block.class === 'Text' && content.length < 140;
-  const tier = getTier(block.id);
   const chColor = getChannelColor(channelTitle);
-
-  const tierBadge = tier ? (
-    <span className="b-tier" style={{ background: TIER_COLORS[tier] }}>{tier}</span>
-  ) : null;
 
   const selectCheck = selectMode ? (
     <span className={`b-select ${selected ? 'b-select--on' : ''}`}>
@@ -105,7 +99,6 @@ const BlockCard = memo(function BlockCard({
           onLoad={() => setImgLoaded(true)}
           className={`b-img ${imgLoaded ? 'b-img--loaded' : ''}`}
         />
-        {tierBadge}
         {selectCheck}
         <span className="b-ch"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}</span>
       </div>
@@ -116,7 +109,6 @@ const BlockCard = memo(function BlockCard({
   if (block.class === 'Text') {
     return (
       <div className={`b b-text ${isShortText ? 'b-text--short' : 'b-text--long'} ${selected ? 'b--selected' : ''}`} onClick={onClick}>
-        {tierBadge}
         {selectCheck}
         <p className="b-text-content">{content.slice(0, isShortText ? 140 : 360)}</p>
         {!isShortText && <div className="b-text-fade" />}
@@ -134,10 +126,7 @@ const BlockCard = memo(function BlockCard({
     return (
       <div className={`b b-link ${selected ? 'b--selected' : ''}`} onClick={onClick}>
         {selectCheck}
-        <div className="b-link-header">
-          <span className="b-link-title">{block.source?.title || block.title || 'Untitled'}</span>
-          {tier && <span className="b-tier-inline" style={{ background: TIER_COLORS[tier] }}>{tier}</span>}
-        </div>
+        <span className="b-link-title">{block.source?.title || block.title || 'Untitled'}</span>
         {domain && <span className="b-link-domain">{domain}</span>}
         <span className="b-ch b-ch--inside"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}</span>
       </div>
@@ -147,7 +136,6 @@ const BlockCard = memo(function BlockCard({
   // Fallback
   return (
     <div className={`b b-fallback ${selected ? 'b--selected' : ''}`} onClick={onClick}>
-      {tierBadge}
       {selectCheck}
       <span className="b-fallback-type">{block.class}</span>
       {block.title && <span className="b-fallback-title">{block.title}</span>}
@@ -223,41 +211,6 @@ const gridStyles = `
   .b-text .b-select--on, .b-link .b-select--on, .b-fallback .b-select--on {
     background: var(--accent);
     border-color: var(--accent);
-  }
-
-  /* --- Tier badge --- */
-  .b-tier {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    font-size: 9px;
-    font-weight: 700;
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 2;
-    pointer-events: none;
-    line-height: 1;
-  }
-  .b-text .b-tier, .b-fallback .b-tier {
-    position: absolute;
-  }
-  .b-tier-inline {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    font-size: 9px;
-    font-weight: 700;
-    color: #fff;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    line-height: 1;
   }
 
   /* --- Image --- */
@@ -367,20 +320,12 @@ const gridStyles = `
     transition: border-color 0.2s ease;
   }
   .b-link:hover { border-color: var(--text-muted); }
-  .b-link-header {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    justify-content: space-between;
-  }
   .b-link-title {
     display: block;
     font-size: 13px;
     line-height: 1.4;
     color: var(--text);
     word-break: break-word;
-    flex: 1;
-    min-width: 0;
   }
   .b-link-domain {
     display: block;
