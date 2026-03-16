@@ -371,6 +371,7 @@ function App() {
           onAddToBoard={handleAddToBoard}
           noteVersion={noteVersion}
           onNoteChange={() => setNoteVersion(v => v + 1)}
+          tierVersion={tierVersion}
         />
       </main>
 
