@@ -58,6 +58,9 @@ function App() {
   channelDataRef.current = channelData;
 
   const loadingChannelsRef = useRef(new Set<string>());
+  const channelLoadedAtRef = useRef(new Map<string, number>());
+
+  const CHANNEL_TTL = 2 * 60 * 1000; // 2 minutes
 
   const loadChannels = useCallback(async (slug: string) => {
     try {
@@ -89,13 +92,17 @@ function App() {
     if (username) loadChannels(username);
   }, [username, loadChannels]);
 
-  const loadChannel = useCallback(async (slug: string) => {
-    if (channelDataRef.current.has(slug)) return;
+  const loadChannel = useCallback(async (slug: string, force = false) => {
+    if (!force && channelDataRef.current.has(slug)) {
+      const loadedAt = channelLoadedAtRef.current.get(slug) || 0;
+      if (Date.now() - loadedAt < CHANNEL_TTL) return;
+    }
     if (loadingChannelsRef.current.has(slug)) return;
     loadingChannelsRef.current.add(slug);
     try {
-      setLoadingBlocks(true);
+      if (!channelDataRef.current.has(slug)) setLoadingBlocks(true);
       const data = await getChannelContents(slug);
+      channelLoadedAtRef.current.set(slug, Date.now());
       setChannelData((prev) => new Map(prev).set(slug, data));
     } catch {
       // silently fail
@@ -110,6 +117,26 @@ function App() {
     setViewingBoard(null);
     if (slug) loadChannel(slug);
   }, [loadChannel]);
+
+  // Auto-refresh selected channel every 2 minutes
+  useEffect(() => {
+    if (!selectedChannel) return;
+    const interval = setInterval(() => {
+      loadChannel(selectedChannel, true);
+    }, CHANNEL_TTL);
+    return () => clearInterval(interval);
+  }, [selectedChannel, loadChannel]);
+
+  const handleRefresh = useCallback(() => {
+    if (selectedChannel) {
+      loadChannel(selectedChannel, true);
+    } else if (username) {
+      // Refresh all loaded channels
+      channelLoadedAtRef.current.clear();
+      setChannelData(new Map());
+      loadChannels(username);
+    }
+  }, [selectedChannel, loadChannel, username, loadChannels]);
 
   const handleToggleHidden = useCallback((slug: string) => {
     setHiddenChannels(prev => {
@@ -358,6 +385,7 @@ function App() {
           hasSelectedChannel={!!selectedChannel}
           viewingBoard={!!viewingBoard}
           onExportBoard={handleExportBoard}
+          onRefresh={handleRefresh}
         />
         <BlockGrid
           blocks={blocks}
