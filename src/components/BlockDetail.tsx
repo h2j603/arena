@@ -269,7 +269,7 @@ const detailStyles = `
     color: var(--text);
     max-height: 55vh;
     overflow-y: auto;
-    font-family: var(--font-serif);
+    font-family: var(--font-display);
   }
   .detail-text-body--short {
     display: flex;
@@ -288,7 +288,7 @@ const detailStyles = `
     letter-spacing: -0.5px;
   }
   .detail-text-mark {
-    font-family: var(--font-serif);
+    font-family: var(--font-display);
     font-size: 80px;
     line-height: 0.5;
     color: var(--text-muted);
@@ -308,7 +308,7 @@ const detailStyles = `
     margin-bottom: 20px;
   }
   .detail-heading {
-    font-family: var(--font-serif);
+    font-family: var(--font-display);
     font-size: 30px;
     font-weight: 400;
     letter-spacing: -0.5px;

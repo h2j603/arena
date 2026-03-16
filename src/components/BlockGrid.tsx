@@ -8,9 +8,12 @@ interface Props {
   allBlocks: { block: ArenaBlock; channelTitle: string }[];
   loading: boolean;
   onTierChange: () => void;
+  selectMode: boolean;
+  selectedIds: Set<number>;
+  onToggleSelect: (id: number) => void;
 }
 
-export function BlockGrid({ blocks, allBlocks, loading, onTierChange }: Props) {
+export function BlockGrid({ blocks, allBlocks, loading, onTierChange, selectMode, selectedIds, onToggleSelect }: Props) {
   const [selectedBlock, setSelectedBlock] = useState<{ block: ArenaBlock; channelTitle: string } | null>(null);
 
   if (loading) {
@@ -34,7 +37,9 @@ export function BlockGrid({ blocks, allBlocks, loading, onTierChange }: Props) {
             key={`${item.block.id}-${item.channelTitle}`}
             block={item.block}
             channelTitle={item.channelTitle}
-            onClick={() => setSelectedBlock(item)}
+            onClick={() => selectMode ? onToggleSelect(item.block.id) : setSelectedBlock(item)}
+            selected={selectMode && selectedIds.has(item.block.id)}
+            selectMode={selectMode}
           />
         ))}
       </div>
@@ -58,10 +63,14 @@ const BlockCard = memo(function BlockCard({
   block,
   channelTitle,
   onClick,
+  selected,
+  selectMode,
 }: {
   block: ArenaBlock;
   channelTitle: string;
   onClick: () => void;
+  selected?: boolean;
+  selectMode?: boolean;
 }) {
   const [imgLoaded, setImgLoaded] = useState(false);
   const content = block.content || '';
@@ -72,10 +81,16 @@ const BlockCard = memo(function BlockCard({
     <span className="b-tier" style={{ background: TIER_COLORS[tier] }}>{tier}</span>
   ) : null;
 
+  const selectCheck = selectMode ? (
+    <span className={`b-select ${selected ? 'b-select--on' : ''}`}>
+      {selected && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+    </span>
+  ) : null;
+
   // Image block
   if (block.image) {
     return (
-      <div className="b" onClick={onClick}>
+      <div className={`b ${selected ? 'b--selected' : ''}`} onClick={onClick}>
         <img
           src={block.image.display.url}
           alt=""
@@ -84,6 +99,7 @@ const BlockCard = memo(function BlockCard({
           className={`b-img ${imgLoaded ? 'b-img--loaded' : ''}`}
         />
         {tierBadge}
+        {selectCheck}
         <span className="b-ch">{channelTitle}</span>
       </div>
     );
@@ -92,8 +108,9 @@ const BlockCard = memo(function BlockCard({
   // Text block
   if (block.class === 'Text') {
     return (
-      <div className={`b b-text ${isShortText ? 'b-text--short' : 'b-text--long'}`} onClick={onClick}>
+      <div className={`b b-text ${isShortText ? 'b-text--short' : 'b-text--long'} ${selected ? 'b--selected' : ''}`} onClick={onClick}>
         {tierBadge}
+        {selectCheck}
         <p className="b-text-content">{content.slice(0, isShortText ? 140 : 360)}</p>
         {!isShortText && <div className="b-text-fade" />}
         <span className="b-ch b-ch--inside">{channelTitle}</span>
@@ -108,8 +125,9 @@ const BlockCard = memo(function BlockCard({
       catch { return null; }
     })();
     return (
-      <div className="b b-link" onClick={onClick}>
+      <div className={`b b-link ${selected ? 'b--selected' : ''}`} onClick={onClick}>
         {tierBadge}
+        {selectCheck}
         <span className="b-link-title">{block.source?.title || block.title || 'Untitled'}</span>
         {domain && <span className="b-link-domain">{domain}</span>}
         <span className="b-ch b-ch--inside">{channelTitle}</span>
@@ -119,8 +137,9 @@ const BlockCard = memo(function BlockCard({
 
   // Fallback
   return (
-    <div className="b b-fallback" onClick={onClick}>
+    <div className={`b b-fallback ${selected ? 'b--selected' : ''}`} onClick={onClick}>
       {tierBadge}
+      {selectCheck}
       <span className="b-fallback-type">{block.class}</span>
       {block.title && <span className="b-fallback-title">{block.title}</span>}
       <span className="b-ch b-ch--inside">{channelTitle}</span>
@@ -146,7 +165,7 @@ const gridStyles = `
     text-align: center;
   }
   .grid-empty-title {
-    font-family: var(--font-serif);
+    font-family: var(--font-display);
     font-size: 24px;
     color: var(--text-secondary);
     font-weight: 400;
@@ -162,6 +181,39 @@ const gridStyles = `
     width: 100%;
     cursor: pointer;
     position: relative;
+  }
+
+  /* --- Select mode --- */
+  .b--selected {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+    border-radius: 4px;
+  }
+  .b-select {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.7);
+    background: rgba(0,0,0,0.2);
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .b-select--on {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .b-text .b-select, .b-link .b-select, .b-fallback .b-select {
+    border-color: var(--border);
+    background: var(--bg-card);
+  }
+  .b-text .b-select--on, .b-link .b-select--on, .b-fallback .b-select--on {
+    background: var(--accent);
+    border-color: var(--accent);
   }
 
   /* --- Tier badge --- */
