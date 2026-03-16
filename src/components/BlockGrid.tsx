@@ -1,4 +1,4 @@
-import { useState, memo, useEffect, useRef } from 'react';
+import { useState, memo, useEffect, useRef, useMemo, useCallback } from 'react';
 import type { ArenaBlock } from '../types';
 import { BlockDetail } from './BlockDetail';
 import type { Board } from '../boards';
@@ -25,6 +25,40 @@ interface Props {
 export function BlockGrid({ blocks, allBlocks, loading, onTierChange, selectMode, selectedIds, onToggleSelect, boards, onAddToBoard, noteVersion, onNoteChange, tierVersion, columnCount }: Props) {
   const [selectedBlock, setSelectedBlock] = useState<{ block: ArenaBlock; channelTitle: string } | null>(null);
   const [memoBlockId, setMemoBlockId] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [computedCols, setComputedCols] = useState(2);
+
+  // Compute number of columns based on container width when columnCount is auto (0)
+  const updateCols = useCallback(() => {
+    if (columnCount > 0) {
+      setComputedCols(columnCount);
+      return;
+    }
+    const el = containerRef.current;
+    if (!el) return;
+    const width = el.clientWidth;
+    if (width <= 480) setComputedCols(2);
+    else if (width <= 768) setComputedCols(2);
+    else if (width <= 1024) setComputedCols(3);
+    else if (width <= 1440) setComputedCols(Math.max(2, Math.floor(width / 300)));
+    else setComputedCols(Math.max(2, Math.floor(width / 320)));
+  }, [columnCount]);
+
+  useEffect(() => {
+    updateCols();
+    const ro = new ResizeObserver(() => updateCols());
+    if (containerRef.current) ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, [updateCols]);
+
+  // Distribute items across columns in row-first (round-robin) order
+  const columns = useMemo(() => {
+    const cols: { block: ArenaBlock; channelTitle: string }[][] = Array.from({ length: computedCols }, () => []);
+    blocks.forEach((item, i) => {
+      cols[i % computedCols].push(item);
+    });
+    return cols;
+  }, [blocks, computedCols]);
 
   if (loading) {
     return <div className="grid-loading"><div className="loading-spinner" /></div>;
@@ -39,27 +73,27 @@ export function BlockGrid({ blocks, allBlocks, loading, onTierChange, selectMode
     );
   }
 
-  const gridStyle: React.CSSProperties = columnCount === 0
-    ? {}
-    : { columns: `${columnCount}` };
-
   return (
     <>
-      <div className="block-grid" style={gridStyle}>
-        {blocks.map((item) => (
-          <BlockCard
-            key={`${item.block.id}-${item.channelTitle}`}
-            block={item.block}
-            channelTitle={item.channelTitle}
-            onClick={() => selectMode ? onToggleSelect(item.block.id) : setSelectedBlock(item)}
-            selected={selectMode && selectedIds.has(item.block.id)}
-            selectMode={selectMode}
-            noteVersion={noteVersion}
-            tierVersion={tierVersion}
-            memoOpen={memoBlockId === item.block.id}
-            onMemoToggle={(id) => setMemoBlockId(prev => prev === id ? null : id)}
-            onNoteChange={onNoteChange}
-          />
+      <div className="block-grid" ref={containerRef}>
+        {columns.map((col, colIdx) => (
+          <div className="block-grid-col" key={colIdx}>
+            {col.map((item) => (
+              <BlockCard
+                key={`${item.block.id}-${item.channelTitle}`}
+                block={item.block}
+                channelTitle={item.channelTitle}
+                onClick={() => selectMode ? onToggleSelect(item.block.id) : setSelectedBlock(item)}
+                selected={selectMode && selectedIds.has(item.block.id)}
+                selectMode={selectMode}
+                noteVersion={noteVersion}
+                tierVersion={tierVersion}
+                memoOpen={memoBlockId === item.block.id}
+                onMemoToggle={(id) => setMemoBlockId(prev => prev === id ? null : id)}
+                onNoteChange={onNoteChange}
+              />
+            ))}
+          </div>
         ))}
       </div>
 
@@ -258,9 +292,13 @@ const BlockCard = memo(function BlockCard({
 
 const gridStyles = `
   .block-grid {
-    columns: 300px;
-    column-gap: 16px;
+    display: flex;
+    gap: 16px;
     padding: 20px 28px 80px;
+  }
+  .block-grid-col {
+    flex: 1;
+    min-width: 0;
   }
 
   .grid-loading, .grid-empty {
@@ -284,9 +322,8 @@ const gridStyles = `
 
   /* --- Block (base) --- */
   .b {
-    break-inside: avoid;
     margin-bottom: 16px;
-    display: inline-block;
+    display: block;
     width: 100%;
     cursor: pointer;
     position: relative;
@@ -576,8 +613,7 @@ const gridStyles = `
   /* --- Responsive --- */
   @media (max-width: 480px) {
     .block-grid {
-      columns: 2;
-      column-gap: 8px;
+      gap: 8px;
       padding: 8px;
     }
     .b { margin-bottom: 8px; }
@@ -594,8 +630,7 @@ const gridStyles = `
   }
   @media (min-width: 481px) and (max-width: 768px) {
     .block-grid {
-      columns: 2;
-      column-gap: 10px;
+      gap: 10px;
       padding: 10px;
     }
     .b { margin-bottom: 10px; }
@@ -612,19 +647,8 @@ const gridStyles = `
   }
   @media (min-width: 769px) and (max-width: 1024px) {
     .block-grid {
-      columns: 3;
-      column-gap: 14px;
+      gap: 14px;
       padding: 16px 20px 80px;
-    }
-  }
-  @media (min-width: 1025px) and (max-width: 1440px) {
-    .block-grid {
-      columns: 300px;
-    }
-  }
-  @media (min-width: 1441px) {
-    .block-grid {
-      columns: 320px;
     }
   }
 `;
