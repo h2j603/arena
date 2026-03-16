@@ -39,6 +39,7 @@ function App() {
   const [tierFilter, setTierFilter] = useState<string>('all');
   const [sortOrder, setSortOrder] = useState<string>('newest');
   const [tierVersion, setTierVersion] = useState(0);
+  const [noteVersion, setNoteVersion] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [hiddenChannels, setHiddenChannels] = useState<Set<string>>(getHiddenChannels);
 
@@ -354,6 +355,8 @@ function App() {
           onToggleSelect={handleToggleSelect}
           boards={boards}
           onAddToBoard={handleAddToBoard}
+          noteVersion={noteVersion}
+          onNoteChange={() => setNoteVersion(v => v + 1)}
         />
       </main>
 

@@ -3,6 +3,7 @@ import type { ArenaBlock } from '../types';
 import { BlockDetail } from './BlockDetail';
 import type { Board } from '../boards';
 import { getChannelColor } from '../channelColors';
+import { hasNote } from '../notes';
 
 interface Props {
   blocks: { block: ArenaBlock; channelTitle: string }[];
@@ -14,9 +15,11 @@ interface Props {
   onToggleSelect: (id: number) => void;
   boards: Board[];
   onAddToBoard: (boardId: string, blockId: number) => void;
+  noteVersion: number;
+  onNoteChange: () => void;
 }
 
-export function BlockGrid({ blocks, allBlocks, loading, onTierChange, selectMode, selectedIds, onToggleSelect, boards, onAddToBoard }: Props) {
+export function BlockGrid({ blocks, allBlocks, loading, onTierChange, selectMode, selectedIds, onToggleSelect, boards, onAddToBoard, noteVersion, onNoteChange }: Props) {
   const [selectedBlock, setSelectedBlock] = useState<{ block: ArenaBlock; channelTitle: string } | null>(null);
 
   if (loading) {
@@ -43,6 +46,7 @@ export function BlockGrid({ blocks, allBlocks, loading, onTierChange, selectMode
             onClick={() => selectMode ? onToggleSelect(item.block.id) : setSelectedBlock(item)}
             selected={selectMode && selectedIds.has(item.block.id)}
             selectMode={selectMode}
+            noteVersion={noteVersion}
           />
         ))}
       </div>
@@ -55,6 +59,7 @@ export function BlockGrid({ blocks, allBlocks, loading, onTierChange, selectMode
           onClose={() => setSelectedBlock(null)}
           onSelectBlock={(item) => setSelectedBlock(item)}
           onTierChange={onTierChange}
+          onNoteChange={onNoteChange}
           boards={boards}
           onAddToBoard={onAddToBoard}
         />
@@ -70,17 +75,22 @@ const BlockCard = memo(function BlockCard({
   onClick,
   selected,
   selectMode,
+  noteVersion,
 }: {
   block: ArenaBlock;
   channelTitle: string;
   onClick: () => void;
   selected?: boolean;
   selectMode?: boolean;
+  noteVersion?: number;
 }) {
   const [imgLoaded, setImgLoaded] = useState(false);
   const content = block.content || '';
   const isShortText = block.class === 'Text' && content.length < 140;
   const chColor = getChannelColor(channelTitle);
+  // noteVersion is used to trigger re-render when notes change
+  void noteVersion;
+  const blockHasNote = hasNote(block.id);
 
   const selectCheck = selectMode ? (
     <span className={`b-select ${selected ? 'b-select--on' : ''}`}>
@@ -100,6 +110,7 @@ const BlockCard = memo(function BlockCard({
           className={`b-img ${imgLoaded ? 'b-img--loaded' : ''}`}
         />
         {selectCheck}
+        {blockHasNote && <span className="b-note-dot" title="Has memo" />}
         <span className="b-ch"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}</span>
       </div>
     );
@@ -112,7 +123,7 @@ const BlockCard = memo(function BlockCard({
         {selectCheck}
         <p className="b-text-content">{content.slice(0, isShortText ? 140 : 360)}</p>
         {!isShortText && <div className="b-text-fade" />}
-        <span className="b-ch b-ch--inside"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}</span>
+        <span className="b-ch b-ch--inside"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}{blockHasNote && <span className="b-note-inline" />}</span>
       </div>
     );
   }
@@ -128,7 +139,7 @@ const BlockCard = memo(function BlockCard({
         {selectCheck}
         <span className="b-link-title">{block.source?.title || block.title || 'Untitled'}</span>
         {domain && <span className="b-link-domain">{domain}</span>}
-        <span className="b-ch b-ch--inside"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}</span>
+        <span className="b-ch b-ch--inside"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}{blockHasNote && <span className="b-note-inline" />}</span>
       </div>
     );
   }
@@ -139,7 +150,7 @@ const BlockCard = memo(function BlockCard({
       {selectCheck}
       <span className="b-fallback-type">{block.class}</span>
       {block.title && <span className="b-fallback-title">{block.title}</span>}
-      <span className="b-ch b-ch--inside"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}</span>
+      <span className="b-ch b-ch--inside"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}{blockHasNote && <span className="b-note-inline" />}</span>
     </div>
   );
 });
@@ -252,6 +263,30 @@ const gridStyles = `
     margin-right: 4px;
     vertical-align: middle;
   }
+  /* Note indicators */
+  .b-note-dot {
+    position: absolute;
+    bottom: 6px;
+    right: 8px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.75);
+    box-shadow: 0 0 0 1.5px rgba(0,0,0,0.15);
+    z-index: 2;
+    pointer-events: none;
+  }
+  .b-note-inline {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    display: inline-block;
+    margin-left: 5px;
+    vertical-align: middle;
+    opacity: 0.7;
+  }
+
   .b:hover .b-ch { opacity: 1; }
 
   /* Channel label inside text/link blocks */
