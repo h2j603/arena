@@ -1,3 +1,5 @@
+import { pushToCloud } from './sync';
+
 export type Tier = 'S' | 'A' | 'B' | 'C';
 
 const STORAGE_KEY = 'arena_block_tiers';
@@ -17,6 +19,7 @@ function load(): Record<string, Tier> {
 
 function save() {
   if (cache) localStorage.setItem(STORAGE_KEY, JSON.stringify(cache));
+  pushToCloud();
 }
 
 export function getTier(blockId: number): Tier | null {

@@ -1,3 +1,5 @@
+import { pushToCloud } from './sync';
+
 const STORAGE_KEY = 'arena_block_notes';
 
 let cache: Record<string, string> | null = null;
@@ -15,6 +17,7 @@ function load(): Record<string, string> {
 
 function save() {
   if (cache) localStorage.setItem(STORAGE_KEY, JSON.stringify(cache));
+  pushToCloud();
 }
 
 export function getNote(blockId: number): string {
