@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import type { ArenaBlock } from '../types';
 import { findRelated } from '../recommend';
 import { getTier, setTier as saveTier, TIERS, TIER_COLORS, type Tier } from '../tiers';
+import type { Board } from '../boards';
+import { getChannelColor } from '../channelColors';
 
 interface BlockItem {
   block: ArenaBlock;
@@ -15,12 +17,16 @@ interface Props {
   onClose: () => void;
   onSelectBlock: (item: BlockItem) => void;
   onTierChange?: () => void;
+  boards?: Board[];
+  onAddToBoard?: (boardId: string, blockId: number) => void;
 }
 
-export function BlockDetail({ block, channelTitle, allBlocks, onClose, onSelectBlock, onTierChange }: Props) {
+export function BlockDetail({ block, channelTitle, allBlocks, onClose, onSelectBlock, onTierChange, boards, onAddToBoard }: Props) {
   const [related, setRelated] = useState<BlockItem[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
   const [currentTier, setCurrentTier] = useState<Tier | null>(() => getTier(block.id));
+  const [showBoardPicker, setShowBoardPicker] = useState(false);
+  const [addedBoardId, setAddedBoardId] = useState<string | null>(null);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -36,6 +42,8 @@ export function BlockDetail({ block, channelTitle, allBlocks, onClose, onSelectB
 
   useEffect(() => {
     setCurrentTier(getTier(block.id));
+    setShowBoardPicker(false);
+    setAddedBoardId(null);
     setLoadingRelated(true);
     setRelated([]);
     findRelated({ block, channelTitle }, allBlocks)
@@ -105,7 +113,7 @@ export function BlockDetail({ block, channelTitle, allBlocks, onClose, onSelectB
             <dl className="detail-fields">
               <div className="detail-field">
                 <dt>Channel</dt>
-                <dd>{channelTitle}</dd>
+                <dd><span className="detail-ch-pill" style={{ background: getChannelColor(channelTitle) }} />{channelTitle}</dd>
               </div>
               <div className="detail-field">
                 <dt>Type</dt>
@@ -137,13 +145,52 @@ export function BlockDetail({ block, channelTitle, allBlocks, onClose, onSelectB
               <p className="detail-desc">{block.description}</p>
             )}
 
-            {block.source?.url && (
-              <div className="detail-actions-row">
+            <div className="detail-actions-row">
+              {block.source?.url && (
                 <a href={block.source.url} target="_blank" rel="noreferrer" className="detail-action">
                   Visit Source
                 </a>
-              </div>
-            )}
+              )}
+              {boards && boards.length > 0 && onAddToBoard && (
+                <div className="detail-board-add-wrap">
+                  <button
+                    className="detail-action detail-action--secondary"
+                    onClick={() => setShowBoardPicker(p => !p)}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                      <path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                    </svg>
+                    Board
+                  </button>
+                  {showBoardPicker && (
+                    <div className="detail-board-picker">
+                      {boards.map(b => {
+                        const alreadyIn = b.blockIds.includes(block.id);
+                        const justAdded = addedBoardId === b.id;
+                        return (
+                          <button
+                            key={b.id}
+                            className={`detail-board-option ${alreadyIn || justAdded ? 'detail-board-option--added' : ''}`}
+                            onClick={() => {
+                              if (!alreadyIn && !justAdded) {
+                                onAddToBoard(b.id, block.id);
+                                setAddedBoardId(b.id);
+                                setTimeout(() => setAddedBoardId(null), 1200);
+                              }
+                            }}
+                          >
+                            <span className="detail-board-option-name">{b.name}</span>
+                            <span className="detail-board-option-status">
+                              {alreadyIn || justAdded ? 'Added' : `${b.blockIds.length}`}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Related works */}
@@ -370,7 +417,18 @@ const detailStyles = `
     letter-spacing: 0.4px;
     padding-top: 1px;
   }
-  .detail-field dd { color: var(--text-secondary); }
+  .detail-field dd {
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .detail-ch-pill {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
   .detail-source-link {
     color: var(--text-secondary);
     text-decoration: underline;
@@ -406,6 +464,60 @@ const detailStyles = `
     letter-spacing: 0.1px;
   }
   .detail-action:hover { opacity: 0.85; }
+  .detail-action--secondary {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+  }
+  .detail-action--secondary:hover {
+    border-color: var(--text-muted);
+    color: var(--text);
+    opacity: 1;
+  }
+  .detail-board-add-wrap {
+    position: relative;
+  }
+  .detail-board-picker {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    min-width: 180px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 10;
+    padding: 4px;
+  }
+  .detail-board-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 6px 10px;
+    font-size: 11px;
+    border-radius: var(--radius);
+    transition: background var(--transition-fast);
+    gap: 8px;
+    text-align: left;
+  }
+  .detail-board-option:hover { background: var(--accent-soft); }
+  .detail-board-option-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+  }
+  .detail-board-option-status {
+    font-size: 10px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+  .detail-board-option--added .detail-board-option-status {
+    color: #27ae60;
+  }
 
   /* Related works */
   .detail-related {
@@ -514,10 +626,12 @@ const detailStyles = `
     }
     .detail-close:hover { color: #fff; }
     .detail-meta { padding: 18px 20px 16px; }
-    .detail-heading { font-size: 24px; }
+    .detail-heading { font-size: 20px; letter-spacing: -0.3px; }
     .detail-top-row { gap: 10px; margin-bottom: 16px; }
     .tier-btn { width: 26px; height: 26px; font-size: 10px; }
-    .detail-text-body { padding: 20px; }
+    .detail-text-body { padding: 20px; font-size: 14px; }
+    .detail-text-body--short div { font-size: 20px; }
+    .detail-text-mark { font-size: 56px; }
     .detail-related { padding: 16px 20px 24px; }
     .detail-related-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
   }
