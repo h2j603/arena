@@ -7,6 +7,8 @@ interface Props {
   onBlockTypeFilterChange: (t: string) => void;
   tierFilter: string;
   onTierFilterChange: (t: string) => void;
+  sortOrder: string;
+  onSortOrderChange: (s: string) => void;
   totalBlocks: number;
   selectedChannelTitle?: string;
   selectMode: boolean;
@@ -38,6 +40,13 @@ const TIER_FILTERS = [
   { value: 'unrated', label: 'Unrated' },
 ];
 
+const SORT_OPTIONS = [
+  { value: 'newest', label: 'Newest' },
+  { value: 'oldest', label: 'Oldest' },
+  { value: 'tier', label: 'By Tier' },
+  { value: 'random', label: 'Random' },
+];
+
 export function Header({
   searchQuery,
   onSearchChange,
@@ -45,6 +54,8 @@ export function Header({
   onBlockTypeFilterChange,
   tierFilter,
   onTierFilterChange,
+  sortOrder,
+  onSortOrderChange,
   totalBlocks,
   selectedChannelTitle,
   selectMode,
@@ -169,6 +180,16 @@ export function Header({
             onClick={() => onTierFilterChange(t.value)}
           >
             {t.label}
+          </button>
+        ))}
+        <span className="filter-divider" />
+        {SORT_OPTIONS.map((s) => (
+          <button
+            key={s.value}
+            className={`type-btn ${sortOrder === s.value ? 'active' : ''}`}
+            onClick={() => onSortOrderChange(s.value)}
+          >
+            {s.label}
           </button>
         ))}
       </div>

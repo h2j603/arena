@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { ArenaBlock } from '../types';
 import { findRelated } from '../recommend';
 import { getTier, setTier as saveTier, TIERS, TIER_COLORS, type Tier } from '../tiers';
+import { getNote, setNote } from '../notes';
 import type { Board } from '../boards';
 import { getChannelColor } from '../channelColors';
 
@@ -17,16 +18,19 @@ interface Props {
   onClose: () => void;
   onSelectBlock: (item: BlockItem) => void;
   onTierChange?: () => void;
+  onNoteChange?: () => void;
   boards?: Board[];
   onAddToBoard?: (boardId: string, blockId: number) => void;
 }
 
-export function BlockDetail({ block, channelTitle, allBlocks, onClose, onSelectBlock, onTierChange, boards, onAddToBoard }: Props) {
+export function BlockDetail({ block, channelTitle, allBlocks, onClose, onSelectBlock, onTierChange, onNoteChange, boards, onAddToBoard }: Props) {
   const [related, setRelated] = useState<BlockItem[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
   const [currentTier, setCurrentTier] = useState<Tier | null>(() => getTier(block.id));
   const [showBoardPicker, setShowBoardPicker] = useState(false);
   const [addedBoardId, setAddedBoardId] = useState<string | null>(null);
+  const [noteText, setNoteText] = useState(() => getNote(block.id));
+  const [noteEditing, setNoteEditing] = useState(false);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -42,6 +46,8 @@ export function BlockDetail({ block, channelTitle, allBlocks, onClose, onSelectB
 
   useEffect(() => {
     setCurrentTier(getTier(block.id));
+    setNoteText(getNote(block.id));
+    setNoteEditing(false);
     setShowBoardPicker(false);
     setAddedBoardId(null);
     setLoadingRelated(true);
@@ -58,6 +64,13 @@ export function BlockDetail({ block, channelTitle, allBlocks, onClose, onSelectB
     saveTier(block.id, next);
     onTierChange?.();
   };
+
+  // Clean up ugly CDN filenames / long hashes for display
+  const rawTitle = block.title || block.source?.title || 'Untitled';
+  const isUglyFilename = /^[0-9a-f_\-]{20,}|stp=|_nc_|fbcdn/i.test(rawTitle);
+  const displayTitle = isUglyFilename
+    ? (block.description?.slice(0, 80) || block.source?.title || channelTitle)
+    : rawTitle;
 
   const date = new Date(block.connected_at || block.created_at).toLocaleDateString('ko-KR', {
     year: 'numeric',
@@ -91,7 +104,7 @@ export function BlockDetail({ block, channelTitle, allBlocks, onClose, onSelectB
           <div className="detail-meta">
             <div className="detail-top-row">
               <h3 className="detail-heading">
-                {block.title || block.source?.title || 'Untitled'}
+                {displayTitle}
               </h3>
               <div className="detail-tier-buttons">
                 {TIERS.map((t) => (
@@ -144,6 +157,60 @@ export function BlockDetail({ block, channelTitle, allBlocks, onClose, onSelectB
             {block.description && (
               <p className="detail-desc">{block.description}</p>
             )}
+
+            <div className="detail-note">
+              <div className="detail-note-header" onClick={() => setNoteEditing(true)}>
+                <span className="detail-note-label">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M2 10h1.5L9.5 4l-1.5-1.5L2 8.5V10z" stroke="currentColor" strokeWidth="1" strokeLinejoin="round"/>
+                    <path d="M7 3.5l1.5 1.5" stroke="currentColor" strokeWidth="1"/>
+                  </svg>
+                  Memo
+                </span>
+                {!noteEditing && noteText && (
+                  <button className="detail-note-edit" onClick={(e) => { e.stopPropagation(); setNoteEditing(true); }}>Edit</button>
+                )}
+              </div>
+              {noteEditing ? (
+                <div className="detail-note-editor">
+                  <textarea
+                    className="detail-note-textarea"
+                    value={noteText}
+                    onChange={(e) => setNoteText(e.target.value)}
+                    placeholder="Add a note about this work..."
+                    autoFocus
+                    rows={3}
+                  />
+                  <div className="detail-note-actions">
+                    <button
+                      className="detail-note-save"
+                      onClick={() => {
+                        setNote(block.id, noteText);
+                        setNoteEditing(false);
+                        onNoteChange?.();
+                      }}
+                    >
+                      Save
+                    </button>
+                    <button
+                      className="detail-note-cancel"
+                      onClick={() => {
+                        setNoteText(getNote(block.id));
+                        setNoteEditing(false);
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : noteText ? (
+                <p className="detail-note-text">{noteText}</p>
+              ) : (
+                <button className="detail-note-add" onClick={() => setNoteEditing(true)}>
+                  + Add a note...
+                </button>
+              )}
+            </div>
 
             <div className="detail-actions-row">
               {block.source?.url && (
@@ -362,6 +429,8 @@ const detailStyles = `
     line-height: 1.2;
     flex: 1;
     min-width: 0;
+    word-break: break-word;
+    overflow-wrap: break-word;
   }
 
   /* Tier buttons */
@@ -445,6 +514,94 @@ const detailStyles = `
     line-height: 1.65;
     margin-bottom: 18px;
   }
+  /* Note / Memo */
+  .detail-note {
+    margin-bottom: 18px;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    background: var(--accent-soft);
+  }
+  .detail-note-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+  }
+  .detail-note-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .detail-note-edit {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .detail-note-edit:hover { color: var(--text-secondary); }
+  .detail-note-text {
+    font-size: 12px;
+    line-height: 1.65;
+    color: var(--text-secondary);
+    margin-top: 8px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .detail-note-add {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 6px;
+    display: block;
+  }
+  .detail-note-add:hover { color: var(--text-secondary); }
+  .detail-note-editor {
+    margin-top: 8px;
+  }
+  .detail-note-textarea {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-card);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 1.6;
+    padding: 8px 10px;
+    resize: vertical;
+    outline: none;
+    min-height: 60px;
+    transition: border-color var(--transition);
+  }
+  .detail-note-textarea:focus { border-color: var(--text-muted); }
+  .detail-note-textarea::placeholder { color: var(--text-muted); }
+  .detail-note-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+  }
+  .detail-note-save {
+    padding: 4px 14px;
+    font-size: 11px;
+    background: var(--accent);
+    color: var(--bg);
+    border-radius: var(--radius);
+    font-weight: 500;
+  }
+  .detail-note-save:hover { opacity: 0.85; }
+  .detail-note-cancel {
+    padding: 4px 14px;
+    font-size: 11px;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .detail-note-cancel:hover { color: var(--text-secondary); border-color: var(--text-muted); }
+
   .detail-actions-row {
     display: flex;
     gap: 8px;
@@ -623,16 +780,41 @@ const detailStyles = `
       color: #fff;
       border: none;
       box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+      z-index: 20;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
     }
     .detail-close:hover { color: #fff; }
     .detail-meta { padding: 18px 20px 16px; }
-    .detail-heading { font-size: 20px; letter-spacing: -0.3px; }
-    .detail-top-row { gap: 10px; margin-bottom: 16px; }
-    .tier-btn { width: 26px; height: 26px; font-size: 10px; }
+    .detail-heading {
+      font-size: 18px;
+      letter-spacing: -0.3px;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+      overflow: hidden;
+    }
+    .detail-top-row {
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .detail-tier-buttons {
+      align-self: flex-start;
+    }
+    .tier-btn { width: 30px; height: 30px; font-size: 11px; }
     .detail-text-body { padding: 20px; font-size: 14px; }
     .detail-text-body--short div { font-size: 20px; }
     .detail-text-mark { font-size: 56px; }
     .detail-related { padding: 16px 20px 24px; }
     .detail-related-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .detail-board-picker {
+      bottom: auto;
+      top: calc(100% + 6px);
+    }
   }
 `;
