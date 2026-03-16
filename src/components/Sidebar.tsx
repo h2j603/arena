@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ArenaChannel } from '../types';
 import { clearToken } from '../api';
+import type { Board } from '../boards';
 
 interface Props {
   channels: ArenaChannel[];
@@ -10,9 +11,13 @@ interface Props {
   loadedChannels: Set<string>;
   hiddenChannels: Set<string>;
   onToggleHidden: (slug: string) => void;
+  boards: Board[];
+  viewingBoard: string | null;
+  onViewBoard: (id: string | null) => void;
+  onDeleteBoard: (id: string) => void;
 }
 
-export function Sidebar({ channels, selectedChannel, onSelectChannel, username, loadedChannels, hiddenChannels, onToggleHidden }: Props) {
+export function Sidebar({ channels, selectedChannel, onSelectChannel, username, loadedChannels, hiddenChannels, onToggleHidden, boards, viewingBoard, onViewBoard, onDeleteBoard }: Props) {
   const [search, setSearch] = useState('');
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -81,6 +86,44 @@ export function Sidebar({ channels, selectedChannel, onSelectChannel, username, 
           <span className="sidebar-item-label">All Channels</span>
           <span className="sidebar-item-num">{channels.length}</span>
         </button>
+
+        {boards.length > 0 && (
+          <>
+            <div className="sidebar-sep" />
+            <div className="sidebar-section-label">Boards</div>
+            {boards.map((board) => (
+              <div key={board.id} className="sidebar-row">
+                <button
+                  className={`sidebar-item ${viewingBoard === board.id ? 'active' : ''}`}
+                  onClick={() => { onViewBoard(board.id); setMobileOpen(false); }}
+                >
+                  <span className="sidebar-item-label">
+                    <span className="sidebar-board-icon">
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                        <rect x="0.5" y="0.5" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="0.8"/>
+                        <rect x="5.5" y="0.5" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="0.8"/>
+                        <rect x="0.5" y="5.5" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="0.8"/>
+                        <rect x="5.5" y="5.5" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="0.8"/>
+                      </svg>
+                    </span>
+                    {board.name}
+                  </span>
+                  <span className="sidebar-item-num">{board.blockIds.length}</span>
+                </button>
+                <button
+                  className="sidebar-vis"
+                  onClick={(e) => { e.stopPropagation(); onDeleteBoard(board.id); }}
+                  title="Delete board"
+                  style={{ opacity: 0.3 }}
+                >
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+                    <path d="M3 3l5 5M8 3l-5 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </>
+        )}
 
         <div className="sidebar-sep" />
 
@@ -206,7 +249,7 @@ const sidebarStyles = `
     gap: 1px;
   }
   .sidebar-title {
-    font-family: var(--font-serif);
+    font-family: var(--font-display);
     font-size: 26px;
     font-weight: 400;
     letter-spacing: -0.5px;
@@ -329,6 +372,18 @@ const sidebarStyles = `
   .sidebar-row:hover .sidebar-vis { opacity: 1; }
   .sidebar-vis.is-hidden { opacity: 0.5; }
   .sidebar-vis:hover { color: var(--text-secondary); }
+  .sidebar-section-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--text-muted);
+    padding: 6px 8px 2px;
+  }
+  .sidebar-board-icon {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
   .sidebar-sep {
     height: 1px;
     background: var(--border);

@@ -1,9 +1,12 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { getSlug, getUserChannels, getChannelContents } from './api';
 import type { ArenaChannel, ArenaBlock } from './types';
+import { getTier } from './tiers';
+import { getBoards, createBoard, deleteBoard, type Board } from './boards';
 import { Sidebar } from './components/Sidebar';
 import { BlockGrid } from './components/BlockGrid';
 import { Header } from './components/Header';
+import { AddBlockModal } from './components/AddBlockModal';
 import './App.css';
 
 interface ChannelData {
@@ -32,8 +35,19 @@ function App() {
   const [loadingBlocks, setLoadingBlocks] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [blockTypeFilter, setBlockTypeFilter] = useState<string>('all');
+  const [tierFilter, setTierFilter] = useState<string>('all');
+  const [tierVersion, setTierVersion] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [hiddenChannels, setHiddenChannels] = useState<Set<string>>(getHiddenChannels);
+
+  // Select mode for moodboards
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [boards, setBoards] = useState<Board[]>(getBoards);
+  const [viewingBoard, setViewingBoard] = useState<string | null>(null);
+
+  // Add block modal
+  const [showAddBlock, setShowAddBlock] = useState(false);
 
   const channelDataRef = useRef(channelData);
   channelDataRef.current = channelData;
@@ -76,6 +90,7 @@ function App() {
 
   const handleSelectChannel = useCallback((slug: string | null) => {
     setSelectedChannel(slug);
+    setViewingBoard(null);
     if (slug) loadChannel(slug);
   }, [loadChannel]);
 
@@ -90,6 +105,36 @@ function App() {
       saveHiddenChannels(next);
       return next;
     });
+  }, []);
+
+  const handleToggleSelect = useCallback((blockId: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(blockId)) next.delete(blockId);
+      else next.add(blockId);
+      return next;
+    });
+  }, []);
+
+  const handleCreateBoard = useCallback((name: string) => {
+    if (selectedIds.size === 0) return;
+    createBoard(name, [...selectedIds]);
+    setBoards(getBoards());
+    setSelectedIds(new Set());
+    setSelectMode(false);
+  }, [selectedIds]);
+
+  const handleDeleteBoard = useCallback((id: string) => {
+    deleteBoard(id);
+    setBoards(getBoards());
+    if (viewingBoard === id) setViewingBoard(null);
+  }, [viewingBoard]);
+
+  const handleViewBoard = useCallback((id: string | null) => {
+    setViewingBoard(id);
+    if (id) {
+      setSelectedChannel(null);
+    }
   }, []);
 
   // All blocks, deduplicated
@@ -110,7 +155,14 @@ function App() {
   const blocks = useMemo(() => {
     let source = allBlocks;
 
-    if (selectedChannel) {
+    // If viewing a board, filter to board blocks
+    if (viewingBoard) {
+      const board = boards.find(b => b.id === viewingBoard);
+      if (board) {
+        const idSet = new Set(board.blockIds);
+        source = allBlocks.filter(item => idSet.has(item.block.id));
+      }
+    } else if (selectedChannel) {
       const data = channelData.get(selectedChannel);
       if (data) {
         const seen = new Set<number>();
@@ -129,6 +181,12 @@ function App() {
     return source
       .filter((item) => {
         if (blockTypeFilter !== 'all' && item.block.class.toLowerCase() !== blockTypeFilter) return false;
+        if (tierFilter !== 'all') {
+          const t = getTier(item.block.id);
+          if (tierFilter === 'rated' && !t) return false;
+          if (tierFilter === 'unrated' && t) return false;
+          if (['S', 'A', 'B', 'C'].includes(tierFilter) && t !== tierFilter) return false;
+        }
         if (searchQuery) {
           const q = searchQuery.toLowerCase();
           const title = (item.block.title || '').toLowerCase();
@@ -143,7 +201,7 @@ function App() {
         new Date(b.block.connected_at || b.block.created_at).getTime() -
         new Date(a.block.connected_at || a.block.created_at).getTime()
       );
-  }, [selectedChannel, channelData, allBlocks, blockTypeFilter, searchQuery]);
+  }, [selectedChannel, channelData, allBlocks, blockTypeFilter, tierFilter, tierVersion, searchQuery, viewingBoard, boards]);
 
   // Batch-load first channels in parallel on initial load
   useEffect(() => {
@@ -166,6 +224,26 @@ function App() {
   }, [channels, channelData.size]);
 
   const loadedChannels = useMemo(() => new Set(channelData.keys()), [channelData]);
+
+  const currentTitle = viewingBoard
+    ? boards.find(b => b.id === viewingBoard)?.name || 'Board'
+    : selectedChannel
+      ? channelData.get(selectedChannel)?.channel.title
+      : undefined;
+
+  const handleBlockAdded = useCallback(() => {
+    // Reload the selected channel to pick up new block
+    if (selectedChannel) {
+      loadingChannelsRef.current.delete(selectedChannel);
+      setChannelData(prev => {
+        const next = new Map(prev);
+        next.delete(selectedChannel);
+        return next;
+      });
+      loadChannel(selectedChannel);
+    }
+    setShowAddBlock(false);
+  }, [selectedChannel, loadChannel]);
 
   if (error) {
     return (
@@ -195,6 +273,10 @@ function App() {
         loadedChannels={loadedChannels}
         hiddenChannels={hiddenChannels}
         onToggleHidden={handleToggleHidden}
+        boards={boards}
+        viewingBoard={viewingBoard}
+        onViewBoard={handleViewBoard}
+        onDeleteBoard={handleDeleteBoard}
       />
       <main className="main-content">
         <Header
@@ -202,15 +284,36 @@ function App() {
           onSearchChange={setSearchQuery}
           blockTypeFilter={blockTypeFilter}
           onBlockTypeFilterChange={setBlockTypeFilter}
+          tierFilter={tierFilter}
+          onTierFilterChange={setTierFilter}
           totalBlocks={blocks.length}
-          selectedChannelTitle={selectedChannel ? channelData.get(selectedChannel)?.channel.title : undefined}
+          selectedChannelTitle={currentTitle}
+          selectMode={selectMode}
+          selectedCount={selectedIds.size}
+          onToggleSelectMode={() => { setSelectMode(m => !m); setSelectedIds(new Set()); }}
+          onCreateBoard={handleCreateBoard}
+          onShowAddBlock={() => setShowAddBlock(true)}
+          hasSelectedChannel={!!selectedChannel}
         />
         <BlockGrid
           blocks={blocks}
           allBlocks={allBlocks}
           loading={loadingBlocks && blocks.length === 0}
+          onTierChange={() => setTierVersion(v => v + 1)}
+          selectMode={selectMode}
+          selectedIds={selectedIds}
+          onToggleSelect={handleToggleSelect}
         />
       </main>
+
+      {showAddBlock && selectedChannel && (
+        <AddBlockModal
+          channelSlug={selectedChannel}
+          channelTitle={channelData.get(selectedChannel)?.channel.title || selectedChannel}
+          onClose={() => setShowAddBlock(false)}
+          onAdded={handleBlockAdded}
+        />
+      )}
     </div>
   );
 }

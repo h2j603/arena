@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ArenaBlock } from '../types';
 import { findRelated } from '../recommend';
+import { getTier, setTier as saveTier, TIERS, TIER_COLORS, type Tier } from '../tiers';
 
 interface BlockItem {
   block: ArenaBlock;
@@ -13,12 +14,13 @@ interface Props {
   allBlocks: BlockItem[];
   onClose: () => void;
   onSelectBlock: (item: BlockItem) => void;
+  onTierChange?: () => void;
 }
 
-export function BlockDetail({ block, channelTitle, allBlocks, onClose, onSelectBlock }: Props) {
+export function BlockDetail({ block, channelTitle, allBlocks, onClose, onSelectBlock, onTierChange }: Props) {
   const [related, setRelated] = useState<BlockItem[]>([]);
-  const [searchQuery, setSearchQuery] = useState<string | null>(null);
   const [loadingRelated, setLoadingRelated] = useState(false);
+  const [currentTier, setCurrentTier] = useState<Tier | null>(() => getTier(block.id));
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -33,29 +35,27 @@ export function BlockDetail({ block, channelTitle, allBlocks, onClose, onSelectB
   }, [onClose]);
 
   useEffect(() => {
+    setCurrentTier(getTier(block.id));
     setLoadingRelated(true);
     setRelated([]);
-    setSearchQuery(null);
     findRelated({ block, channelTitle }, allBlocks)
-      .then((result) => {
-        setRelated(result.related);
-        setSearchQuery(result.searchQuery);
-      })
-      .catch(() => {
-        // silently fail
-      })
+      .then(setRelated)
+      .catch(() => {})
       .finally(() => setLoadingRelated(false));
   }, [block.id, channelTitle, allBlocks]);
+
+  const handleTier = (tier: Tier) => {
+    const next = currentTier === tier ? null : tier;
+    setCurrentTier(next);
+    saveTier(block.id, next);
+    onTierChange?.();
+  };
 
   const date = new Date(block.connected_at || block.created_at).toLocaleDateString('ko-KR', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   });
-
-  const handleRelatedClick = (item: BlockItem) => {
-    onSelectBlock(item);
-  };
 
   return (
     <div className="detail-overlay" onClick={onClose}>
@@ -81,9 +81,26 @@ export function BlockDetail({ block, channelTitle, allBlocks, onClose, onSelectB
           )}
 
           <div className="detail-meta">
-            <h3 className="detail-heading">
-              {block.title || block.source?.title || 'Untitled'}
-            </h3>
+            <div className="detail-top-row">
+              <h3 className="detail-heading">
+                {block.title || block.source?.title || 'Untitled'}
+              </h3>
+              <div className="detail-tier-buttons">
+                {TIERS.map((t) => (
+                  <button
+                    key={t}
+                    className={`tier-btn ${currentTier === t ? 'tier-btn--active' : ''}`}
+                    style={{
+                      '--tier-color': TIER_COLORS[t],
+                    } as React.CSSProperties}
+                    onClick={() => handleTier(t)}
+                    title={`Tier ${t}`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <dl className="detail-fields">
               <div className="detail-field">
@@ -108,41 +125,28 @@ export function BlockDetail({ block, channelTitle, allBlocks, onClose, onSelectB
                   </dd>
                 </div>
               )}
+              {currentTier && (
+                <div className="detail-field">
+                  <dt>Tier</dt>
+                  <dd style={{ color: TIER_COLORS[currentTier], fontWeight: 600 }}>{currentTier}</dd>
+                </div>
+              )}
             </dl>
 
             {block.description && (
               <p className="detail-desc">{block.description}</p>
             )}
 
-            <div className="detail-actions-row">
-              {block.source?.url && (
-                <a
-                  href={block.source.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="detail-action"
-                >
+            {block.source?.url && (
+              <div className="detail-actions-row">
+                <a href={block.source.url} target="_blank" rel="noreferrer" className="detail-action">
                   Visit Source
                 </a>
-              )}
-              {searchQuery && (
-                <a
-                  href={`https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="detail-action detail-action--secondary"
-                >
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                    <circle cx="5" cy="5" r="3.5" stroke="currentColor" strokeWidth="1.2"/>
-                    <path d="M7.5 7.5L10.5 10.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                  </svg>
-                  Find Similar
-                </a>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
-          {/* Related works section */}
+          {/* Related works */}
           <div className="detail-related">
             <h4 className="detail-related-title">Related in your archive</h4>
             {loadingRelated && (
@@ -156,7 +160,7 @@ export function BlockDetail({ block, channelTitle, allBlocks, onClose, onSelectB
                   <div
                     key={item.block.id}
                     className="detail-related-item"
-                    onClick={() => handleRelatedClick(item)}
+                    onClick={() => onSelectBlock(item)}
                   >
                     {item.block.image ? (
                       <img
@@ -265,7 +269,7 @@ const detailStyles = `
     color: var(--text);
     max-height: 55vh;
     overflow-y: auto;
-    font-family: var(--font-serif);
+    font-family: var(--font-display);
   }
   .detail-text-body--short {
     display: flex;
@@ -284,7 +288,7 @@ const detailStyles = `
     letter-spacing: -0.5px;
   }
   .detail-text-mark {
-    font-family: var(--font-serif);
+    font-family: var(--font-display);
     font-size: 80px;
     line-height: 0.5;
     color: var(--text-muted);
@@ -296,14 +300,55 @@ const detailStyles = `
   .detail-meta {
     padding: 24px 28px 20px;
   }
+  .detail-top-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
   .detail-heading {
-    font-family: var(--font-serif);
+    font-family: var(--font-display);
     font-size: 30px;
     font-weight: 400;
     letter-spacing: -0.5px;
-    margin-bottom: 20px;
     line-height: 1.2;
+    flex: 1;
+    min-width: 0;
   }
+
+  /* Tier buttons */
+  .detail-tier-buttons {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+    padding-top: 4px;
+  }
+  .tier-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: var(--tier-color);
+    border: 1.5px solid var(--tier-color);
+    background: transparent;
+    opacity: 0.35;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .tier-btn:hover {
+    opacity: 0.7;
+  }
+  .tier-btn--active {
+    opacity: 1;
+    background: var(--tier-color);
+    color: #fff;
+  }
+
   .detail-fields {
     display: flex;
     flex-direction: column;
@@ -361,16 +406,6 @@ const detailStyles = `
     letter-spacing: 0.1px;
   }
   .detail-action:hover { opacity: 0.85; }
-  .detail-action--secondary {
-    background: transparent;
-    color: var(--text-secondary);
-    border: 1px solid var(--border);
-  }
-  .detail-action--secondary:hover {
-    border-color: var(--text-muted);
-    color: var(--text);
-    opacity: 1;
-  }
 
   /* Related works */
   .detail-related {
@@ -480,6 +515,8 @@ const detailStyles = `
     .detail-close:hover { color: #fff; }
     .detail-meta { padding: 18px 20px 16px; }
     .detail-heading { font-size: 24px; }
+    .detail-top-row { gap: 10px; margin-bottom: 16px; }
+    .tier-btn { width: 26px; height: 26px; font-size: 10px; }
     .detail-text-body { padding: 20px; }
     .detail-related { padding: 16px 20px 24px; }
     .detail-related-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
