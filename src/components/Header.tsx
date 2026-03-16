@@ -20,6 +20,8 @@ interface Props {
   viewingBoard?: boolean;
   onExportBoard?: () => void;
   onRefresh?: () => void;
+  columnCount: number;
+  onColumnCountChange: (n: number) => void;
 }
 
 const BLOCK_TYPES = [
@@ -48,6 +50,14 @@ const SORT_OPTIONS = [
   { value: 'random', label: 'Random' },
 ];
 
+const COLUMN_OPTIONS = [
+  { value: 0, label: 'Auto', icon: 'Auto' },
+  { value: 2, label: '2 columns', icon: '2' },
+  { value: 3, label: '3 columns', icon: '3' },
+  { value: 4, label: '4 columns', icon: '4' },
+  { value: 5, label: '5 columns', icon: '5' },
+];
+
 export function Header({
   searchQuery,
   onSearchChange,
@@ -68,6 +78,8 @@ export function Header({
   viewingBoard,
   onExportBoard,
   onRefresh,
+  columnCount,
+  onColumnCountChange,
 }: Props) {
   const [boardName, setBoardName] = useState('');
   const [showNameInput, setShowNameInput] = useState(false);
@@ -199,6 +211,17 @@ export function Header({
             onClick={() => onSortOrderChange(s.value)}
           >
             {s.label}
+          </button>
+        ))}
+        <span className="filter-divider" />
+        {COLUMN_OPTIONS.map((c) => (
+          <button
+            key={c.value}
+            className={`type-btn col-btn ${columnCount === c.value ? 'active' : ''}`}
+            onClick={() => onColumnCountChange(c.value)}
+            title={c.label}
+          >
+            {c.icon}
           </button>
         ))}
       </div>
@@ -375,6 +398,11 @@ const headerStyles = `
     color: var(--text);
     font-weight: 500;
     background: var(--accent-soft);
+  }
+  .col-btn {
+    font-variant-numeric: tabular-nums;
+    min-width: 28px;
+    text-align: center;
   }
 
   @media (max-width: 768px) {

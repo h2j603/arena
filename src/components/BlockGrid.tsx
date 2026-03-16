@@ -1,9 +1,9 @@
-import { useState, memo } from 'react';
+import { useState, memo, useEffect, useRef } from 'react';
 import type { ArenaBlock } from '../types';
 import { BlockDetail } from './BlockDetail';
 import type { Board } from '../boards';
 import { getChannelColor } from '../channelColors';
-import { hasNote } from '../notes';
+import { hasNote, getNote, setNote } from '../notes';
 import { getTier, TIER_COLORS } from '../tiers';
 
 interface Props {
@@ -19,10 +19,12 @@ interface Props {
   noteVersion: number;
   onNoteChange: () => void;
   tierVersion: number;
+  columnCount: number;
 }
 
-export function BlockGrid({ blocks, allBlocks, loading, onTierChange, selectMode, selectedIds, onToggleSelect, boards, onAddToBoard, noteVersion, onNoteChange, tierVersion }: Props) {
+export function BlockGrid({ blocks, allBlocks, loading, onTierChange, selectMode, selectedIds, onToggleSelect, boards, onAddToBoard, noteVersion, onNoteChange, tierVersion, columnCount }: Props) {
   const [selectedBlock, setSelectedBlock] = useState<{ block: ArenaBlock; channelTitle: string } | null>(null);
+  const [memoBlockId, setMemoBlockId] = useState<number | null>(null);
 
   if (loading) {
     return <div className="grid-loading"><div className="loading-spinner" /></div>;
@@ -37,9 +39,13 @@ export function BlockGrid({ blocks, allBlocks, loading, onTierChange, selectMode
     );
   }
 
+  const gridStyle: React.CSSProperties = columnCount === 0
+    ? {}
+    : { columns: `${columnCount}` };
+
   return (
     <>
-      <div className="block-grid">
+      <div className="block-grid" style={gridStyle}>
         {blocks.map((item) => (
           <BlockCard
             key={`${item.block.id}-${item.channelTitle}`}
@@ -50,6 +56,9 @@ export function BlockGrid({ blocks, allBlocks, loading, onTierChange, selectMode
             selectMode={selectMode}
             noteVersion={noteVersion}
             tierVersion={tierVersion}
+            memoOpen={memoBlockId === item.block.id}
+            onMemoToggle={(id) => setMemoBlockId(prev => prev === id ? null : id)}
+            onNoteChange={onNoteChange}
           />
         ))}
       </div>
@@ -72,6 +81,48 @@ export function BlockGrid({ blocks, allBlocks, loading, onTierChange, selectMode
   );
 }
 
+function InlineMemo({ blockId, onNoteChange, onClose }: { blockId: number; onNoteChange?: () => void; onClose: () => void }) {
+  const [text, setText] = useState(() => getNote(blockId));
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    ref.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const el = (e.target as HTMLElement).closest('.b-memo-popup');
+      if (!el) onClose();
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [onClose]);
+
+  const save = () => {
+    setNote(blockId, text);
+    onNoteChange?.();
+    onClose();
+  };
+
+  return (
+    <div className="b-memo-popup" onClick={(e) => e.stopPropagation()}>
+      <textarea
+        ref={ref}
+        className="b-memo-textarea"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="Write a memo..."
+        rows={3}
+        onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) save(); }}
+      />
+      <div className="b-memo-actions">
+        <button className="b-memo-save" onClick={save}>Save</button>
+        <button className="b-memo-cancel" onClick={onClose}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
 const BlockCard = memo(function BlockCard({
   block,
   channelTitle,
@@ -80,6 +131,9 @@ const BlockCard = memo(function BlockCard({
   selectMode,
   noteVersion,
   tierVersion,
+  memoOpen,
+  onMemoToggle,
+  onNoteChange,
 }: {
   block: ArenaBlock;
   channelTitle: string;
@@ -88,6 +142,9 @@ const BlockCard = memo(function BlockCard({
   selectMode?: boolean;
   noteVersion?: number;
   tierVersion?: number;
+  memoOpen?: boolean;
+  onMemoToggle?: (id: number) => void;
+  onNoteChange?: () => void;
 }) {
   const [imgLoaded, setImgLoaded] = useState(false);
   const content = block.content || '';
@@ -104,6 +161,23 @@ const BlockCard = memo(function BlockCard({
     </span>
   ) : null;
 
+  const memoBtn = !selectMode ? (
+    <button
+      className={`b-memo-btn ${blockHasNote ? 'b-memo-btn--has' : ''}`}
+      onClick={(e) => { e.stopPropagation(); onMemoToggle?.(block.id); }}
+      title={blockHasNote ? 'Edit memo' : 'Add memo'}
+    >
+      <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+        <path d="M2 10h1.5L9.5 4l-1.5-1.5L2 8.5V10z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+        <path d="M7 3.5l1.5 1.5" stroke="currentColor" strokeWidth="1.2"/>
+      </svg>
+    </button>
+  ) : null;
+
+  const memoPopup = memoOpen ? (
+    <InlineMemo blockId={block.id} onNoteChange={onNoteChange} onClose={() => onMemoToggle?.(block.id)} />
+  ) : null;
+
   // Image block
   if (block.image) {
     return (
@@ -117,11 +191,13 @@ const BlockCard = memo(function BlockCard({
             className={`b-img ${imgLoaded ? 'b-img--loaded' : ''}`}
           />
           {selectCheck}
+          {memoBtn}
         </div>
         <div className="b-info">
           <span className="b-info-ch"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}{blockHasNote && <span className="b-note-inline" />}</span>
           {blockTier && <span className="b-info-tier" style={{ color: TIER_COLORS[blockTier] }}>{blockTier}</span>}
         </div>
+        {memoPopup}
       </div>
     );
   }
@@ -131,12 +207,14 @@ const BlockCard = memo(function BlockCard({
     return (
       <div className={`b b-text ${isShortText ? 'b-text--short' : 'b-text--long'} ${selected ? 'b--selected' : ''}`} onClick={onClick}>
         {selectCheck}
+        {memoBtn}
         <p className="b-text-content">{content.slice(0, isShortText ? 140 : 360)}</p>
         {!isShortText && <div className="b-text-fade" />}
         <div className="b-info b-info--inside">
           <span className="b-info-ch"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}{blockHasNote && <span className="b-note-inline" />}</span>
           {blockTier && <span className="b-info-tier" style={{ color: TIER_COLORS[blockTier] }}>{blockTier}</span>}
         </div>
+        {memoPopup}
       </div>
     );
   }
@@ -150,12 +228,14 @@ const BlockCard = memo(function BlockCard({
     return (
       <div className={`b b-link ${selected ? 'b--selected' : ''}`} onClick={onClick}>
         {selectCheck}
+        {memoBtn}
         <span className="b-link-title">{block.source?.title || block.title || 'Untitled'}</span>
         {domain && <span className="b-link-domain">{domain}</span>}
         <div className="b-info b-info--inside">
           <span className="b-info-ch"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}{blockHasNote && <span className="b-note-inline" />}</span>
           {blockTier && <span className="b-info-tier" style={{ color: TIER_COLORS[blockTier] }}>{blockTier}</span>}
         </div>
+        {memoPopup}
       </div>
     );
   }
@@ -164,12 +244,14 @@ const BlockCard = memo(function BlockCard({
   return (
     <div className={`b b-fallback ${selected ? 'b--selected' : ''}`} onClick={onClick}>
       {selectCheck}
+      {memoBtn}
       <span className="b-fallback-type">{block.class}</span>
       {block.title && <span className="b-fallback-title">{block.title}</span>}
       <div className="b-info b-info--inside">
         <span className="b-info-ch"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}{blockHasNote && <span className="b-note-inline" />}</span>
         {blockTier && <span className="b-info-tier" style={{ color: TIER_COLORS[blockTier] }}>{blockTier}</span>}
       </div>
+      {memoPopup}
     </div>
   );
 });
@@ -403,8 +485,114 @@ const gridStyles = `
     line-height: 1.4;
   }
 
-  /* --- Mobile --- */
-  @media (max-width: 768px) {
+  /* --- Inline memo button --- */
+  .b-memo-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.35);
+    color: rgba(255,255,255,0.85);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+  }
+  .b:hover .b-memo-btn, .b-memo-btn--has { opacity: 1; }
+  .b-memo-btn--has {
+    background: var(--accent);
+    color: var(--bg);
+  }
+  .b-text .b-memo-btn, .b-link .b-memo-btn, .b-fallback .b-memo-btn {
+    background: var(--bg-card);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+  .b-text .b-memo-btn--has, .b-link .b-memo-btn--has, .b-fallback .b-memo-btn--has {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+  }
+
+  /* --- Inline memo popup --- */
+  .b-memo-popup {
+    margin-top: 6px;
+    padding: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md, 6px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    z-index: 10;
+    position: relative;
+  }
+  .b-memo-textarea {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 11px;
+    line-height: 1.5;
+    padding: 6px 8px;
+    resize: vertical;
+    outline: none;
+    min-height: 48px;
+    transition: border-color 0.15s;
+  }
+  .b-memo-textarea:focus { border-color: var(--text-muted); }
+  .b-memo-textarea::placeholder { color: var(--text-muted); }
+  .b-memo-actions {
+    display: flex;
+    gap: 4px;
+    margin-top: 4px;
+    justify-content: flex-end;
+  }
+  .b-memo-save {
+    padding: 3px 10px;
+    font-size: 10px;
+    background: var(--accent);
+    color: var(--bg);
+    border-radius: 4px;
+    font-weight: 500;
+  }
+  .b-memo-save:hover { opacity: 0.85; }
+  .b-memo-cancel {
+    padding: 3px 10px;
+    font-size: 10px;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  .b-memo-cancel:hover { color: var(--text-secondary); }
+
+  /* --- Responsive --- */
+  @media (max-width: 480px) {
+    .block-grid {
+      columns: 2;
+      column-gap: 8px;
+      padding: 8px;
+    }
+    .b { margin-bottom: 8px; }
+    .b-info-ch { font-size: 7px; }
+    .b-info-tier { font-size: 8px; }
+    .b-text--short { padding: 10px 12px 8px; }
+    .b-text--short .b-text-content { font-size: 11px; }
+    .b-text--long { padding: 10px 12px 8px; max-height: 140px; }
+    .b-text--long .b-text-content { font-size: 10px; -webkit-line-clamp: 5; }
+    .b-link { padding: 10px 12px 8px; }
+    .b-link-title { font-size: 10px; }
+    .grid-empty-title { font-size: 16px; }
+    .b-info--inside { margin-top: 4px; }
+  }
+  @media (min-width: 481px) and (max-width: 768px) {
     .block-grid {
       columns: 2;
       column-gap: 10px;
@@ -421,5 +609,22 @@ const gridStyles = `
     .b-link-title { font-size: 11px; }
     .grid-empty-title { font-size: 18px; }
     .b-info--inside { margin-top: 6px; }
+  }
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .block-grid {
+      columns: 3;
+      column-gap: 14px;
+      padding: 16px 20px 80px;
+    }
+  }
+  @media (min-width: 1025px) and (max-width: 1440px) {
+    .block-grid {
+      columns: 300px;
+    }
+  }
+  @media (min-width: 1441px) {
+    .block-grid {
+      columns: 320px;
+    }
   }
 `;
