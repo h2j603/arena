@@ -2,6 +2,8 @@ import { useState, memo } from 'react';
 import type { ArenaBlock } from '../types';
 import { BlockDetail } from './BlockDetail';
 import { getTier, TIER_COLORS } from '../tiers';
+import type { Board } from '../boards';
+import { getChannelColor } from '../channelColors';
 
 interface Props {
   blocks: { block: ArenaBlock; channelTitle: string }[];
@@ -11,9 +13,11 @@ interface Props {
   selectMode: boolean;
   selectedIds: Set<number>;
   onToggleSelect: (id: number) => void;
+  boards: Board[];
+  onAddToBoard: (boardId: string, blockId: number) => void;
 }
 
-export function BlockGrid({ blocks, allBlocks, loading, onTierChange, selectMode, selectedIds, onToggleSelect }: Props) {
+export function BlockGrid({ blocks, allBlocks, loading, onTierChange, selectMode, selectedIds, onToggleSelect, boards, onAddToBoard }: Props) {
   const [selectedBlock, setSelectedBlock] = useState<{ block: ArenaBlock; channelTitle: string } | null>(null);
 
   if (loading) {
@@ -52,6 +56,8 @@ export function BlockGrid({ blocks, allBlocks, loading, onTierChange, selectMode
           onClose={() => setSelectedBlock(null)}
           onSelectBlock={(item) => setSelectedBlock(item)}
           onTierChange={onTierChange}
+          boards={boards}
+          onAddToBoard={onAddToBoard}
         />
       )}
       <style>{gridStyles}</style>
@@ -76,6 +82,7 @@ const BlockCard = memo(function BlockCard({
   const content = block.content || '';
   const isShortText = block.class === 'Text' && content.length < 140;
   const tier = getTier(block.id);
+  const chColor = getChannelColor(channelTitle);
 
   const tierBadge = tier ? (
     <span className="b-tier" style={{ background: TIER_COLORS[tier] }}>{tier}</span>
@@ -100,7 +107,7 @@ const BlockCard = memo(function BlockCard({
         />
         {tierBadge}
         {selectCheck}
-        <span className="b-ch">{channelTitle}</span>
+        <span className="b-ch"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}</span>
       </div>
     );
   }
@@ -113,7 +120,7 @@ const BlockCard = memo(function BlockCard({
         {selectCheck}
         <p className="b-text-content">{content.slice(0, isShortText ? 140 : 360)}</p>
         {!isShortText && <div className="b-text-fade" />}
-        <span className="b-ch b-ch--inside">{channelTitle}</span>
+        <span className="b-ch b-ch--inside"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}</span>
       </div>
     );
   }
@@ -126,11 +133,13 @@ const BlockCard = memo(function BlockCard({
     })();
     return (
       <div className={`b b-link ${selected ? 'b--selected' : ''}`} onClick={onClick}>
-        {tierBadge}
         {selectCheck}
-        <span className="b-link-title">{block.source?.title || block.title || 'Untitled'}</span>
+        <div className="b-link-header">
+          <span className="b-link-title">{block.source?.title || block.title || 'Untitled'}</span>
+          {tier && <span className="b-tier-inline" style={{ background: TIER_COLORS[tier] }}>{tier}</span>}
+        </div>
         {domain && <span className="b-link-domain">{domain}</span>}
-        <span className="b-ch b-ch--inside">{channelTitle}</span>
+        <span className="b-ch b-ch--inside"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}</span>
       </div>
     );
   }
@@ -142,7 +151,7 @@ const BlockCard = memo(function BlockCard({
       {selectCheck}
       <span className="b-fallback-type">{block.class}</span>
       {block.title && <span className="b-fallback-title">{block.title}</span>}
-      <span className="b-ch b-ch--inside">{channelTitle}</span>
+      <span className="b-ch b-ch--inside"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}</span>
     </div>
   );
 });
@@ -234,8 +243,21 @@ const gridStyles = `
     pointer-events: none;
     line-height: 1;
   }
-  .b-text .b-tier, .b-link .b-tier, .b-fallback .b-tier {
+  .b-text .b-tier, .b-fallback .b-tier {
     position: absolute;
+  }
+  .b-tier-inline {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    font-size: 9px;
+    font-weight: 700;
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    line-height: 1;
   }
 
   /* --- Image --- */
@@ -267,6 +289,15 @@ const gridStyles = `
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .b-ch-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+    margin-right: 4px;
+    vertical-align: middle;
   }
   .b:hover .b-ch { opacity: 1; }
 
@@ -336,12 +367,20 @@ const gridStyles = `
     transition: border-color 0.2s ease;
   }
   .b-link:hover { border-color: var(--text-muted); }
+  .b-link-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    justify-content: space-between;
+  }
   .b-link-title {
     display: block;
     font-size: 13px;
     line-height: 1.4;
     color: var(--text);
     word-break: break-word;
+    flex: 1;
+    min-width: 0;
   }
   .b-link-domain {
     display: block;
@@ -388,7 +427,8 @@ const gridStyles = `
     .b-text--long { padding: 12px 14px 8px; max-height: 160px; }
     .b-text--long .b-text-content { font-size: 11px; -webkit-line-clamp: 6; }
     .b-link { padding: 12px 14px 8px; }
-    .b-link-title { font-size: 12px; }
+    .b-link-title { font-size: 11px; }
+    .grid-empty-title { font-size: 18px; }
     .b-ch--inside { font-size: 8px; margin-top: 6px; }
   }
 `;

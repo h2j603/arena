@@ -340,7 +340,7 @@ const headerStyles = `
       gap: 8px;
       height: 52px;
     }
-    .header-title { font-size: 22px; }
+    .header-title { font-size: 18px; letter-spacing: -0.3px; }
     .header-search { width: 90px; font-size: 11px; padding-left: 24px; }
     .header-search:focus { width: 120px; }
     .search-icon { left: 6px; }

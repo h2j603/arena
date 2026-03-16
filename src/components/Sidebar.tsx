@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { ArenaChannel } from '../types';
 import { clearToken } from '../api';
 import type { Board } from '../boards';
+import { getChannelColor } from '../channelColors';
 
 interface Props {
   channels: ArenaChannel[];
@@ -134,7 +135,7 @@ export function Sidebar({ channels, selectedChannel, onSelectChannel, username, 
               onClick={() => { onSelectChannel(ch.slug); setMobileOpen(false); }}
             >
               <span className="sidebar-item-label">
-                {loadedChannels.has(ch.slug) && <span className="sidebar-dot" />}
+                <span className="sidebar-ch-dot" style={{ background: getChannelColor(ch.title) }} />
                 {ch.title}
               </span>
               <span className="sidebar-item-num">{ch.length}</span>
@@ -347,6 +348,12 @@ const sidebarStyles = `
     height: 4px;
     border-radius: 50%;
     background: var(--text-muted);
+    flex-shrink: 0;
+  }
+  .sidebar-ch-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
     flex-shrink: 0;
   }
   .sidebar-item-num {

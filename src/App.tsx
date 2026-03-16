@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { getSlug, getUserChannels, getChannelContents } from './api';
 import type { ArenaChannel, ArenaBlock } from './types';
 import { getTier } from './tiers';
-import { getBoards, createBoard, deleteBoard, type Board } from './boards';
+import { getBoards, createBoard, deleteBoard, addToBoard, type Board } from './boards';
 import { Sidebar } from './components/Sidebar';
 import { BlockGrid } from './components/BlockGrid';
 import { Header } from './components/Header';
@@ -129,6 +129,11 @@ function App() {
     setBoards(getBoards());
     if (viewingBoard === id) setViewingBoard(null);
   }, [viewingBoard]);
+
+  const handleAddToBoard = useCallback((boardId: string, blockId: number) => {
+    addToBoard(boardId, [blockId]);
+    setBoards(getBoards());
+  }, []);
 
   const handleViewBoard = useCallback((id: string | null) => {
     setViewingBoard(id);
@@ -303,6 +308,8 @@ function App() {
           selectMode={selectMode}
           selectedIds={selectedIds}
           onToggleSelect={handleToggleSelect}
+          boards={boards}
+          onAddToBoard={handleAddToBoard}
         />
       </main>
 
