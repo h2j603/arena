@@ -763,11 +763,14 @@ const detailStyles = `
     .detail-overlay {
       padding: 0;
       align-items: flex-end;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
     .detail-panel {
-      max-height: 92vh;
+      max-height: none;
       border-radius: var(--radius-lg) var(--radius-lg) 0 0;
       animation: detailSlideUpMobile 0.3s ease;
+      margin-top: auto;
     }
     @keyframes detailSlideUpMobile {
       from { transform: translateY(100%); }
