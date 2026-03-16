@@ -424,7 +424,7 @@ const detailStyles = `
   .detail-heading {
     font-family: var(--font-display);
     font-size: 30px;
-    font-weight: 400;
+    font-weight: 700;
     letter-spacing: -0.5px;
     line-height: 1.2;
     flex: 1;

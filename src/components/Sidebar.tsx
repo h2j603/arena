@@ -252,7 +252,7 @@ const sidebarStyles = `
   .sidebar-title {
     font-family: var(--font-display);
     font-size: 26px;
-    font-weight: 400;
+    font-weight: 700;
     letter-spacing: -0.5px;
     line-height: 1;
   }

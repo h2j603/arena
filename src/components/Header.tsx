@@ -228,7 +228,7 @@ const headerStyles = `
   .header-title {
     font-family: var(--font-display);
     font-size: 28px;
-    font-weight: 400;
+    font-weight: 700;
     letter-spacing: -0.5px;
     white-space: nowrap;
     overflow: hidden;
