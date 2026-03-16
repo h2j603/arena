@@ -36,7 +36,7 @@ async function apiFetch<T>(path: string): Promise<T> {
   if (accessToken) {
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
-  const res = await fetch(url, { headers });
+  const res = await fetch(url, { headers, cache: 'no-store' });
   if (!res.ok) {
     const body = await res.text().catch(() => '');
     throw new Error(`API ${res.status}: ${body || res.statusText}`);
