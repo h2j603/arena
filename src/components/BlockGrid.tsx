@@ -176,7 +176,7 @@ const gridStyles = `
     font-family: var(--font-display);
     font-size: 24px;
     color: var(--text-secondary);
-    font-weight: 400;
+    font-weight: 700;
     letter-spacing: -0.3px;
   }
   .grid-empty-sub { font-size: 12px; }
