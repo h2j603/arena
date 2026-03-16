@@ -59,6 +59,13 @@ export function BlockDetail({ block, channelTitle, allBlocks, onClose, onSelectB
     onTierChange?.();
   };
 
+  // Clean up ugly CDN filenames / long hashes for display
+  const rawTitle = block.title || block.source?.title || 'Untitled';
+  const isUglyFilename = /^[0-9a-f_\-]{20,}|stp=|_nc_|fbcdn/i.test(rawTitle);
+  const displayTitle = isUglyFilename
+    ? (block.description?.slice(0, 80) || block.source?.title || channelTitle)
+    : rawTitle;
+
   const date = new Date(block.connected_at || block.created_at).toLocaleDateString('ko-KR', {
     year: 'numeric',
     month: 'long',
@@ -91,7 +98,7 @@ export function BlockDetail({ block, channelTitle, allBlocks, onClose, onSelectB
           <div className="detail-meta">
             <div className="detail-top-row">
               <h3 className="detail-heading">
-                {block.title || block.source?.title || 'Untitled'}
+                {displayTitle}
               </h3>
               <div className="detail-tier-buttons">
                 {TIERS.map((t) => (
@@ -362,6 +369,8 @@ const detailStyles = `
     line-height: 1.2;
     flex: 1;
     min-width: 0;
+    word-break: break-word;
+    overflow-wrap: break-word;
   }
 
   /* Tier buttons */
@@ -623,16 +632,41 @@ const detailStyles = `
       color: #fff;
       border: none;
       box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+      z-index: 20;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
     }
     .detail-close:hover { color: #fff; }
     .detail-meta { padding: 18px 20px 16px; }
-    .detail-heading { font-size: 20px; letter-spacing: -0.3px; }
-    .detail-top-row { gap: 10px; margin-bottom: 16px; }
-    .tier-btn { width: 26px; height: 26px; font-size: 10px; }
+    .detail-heading {
+      font-size: 18px;
+      letter-spacing: -0.3px;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+      overflow: hidden;
+    }
+    .detail-top-row {
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .detail-tier-buttons {
+      align-self: flex-start;
+    }
+    .tier-btn { width: 30px; height: 30px; font-size: 11px; }
     .detail-text-body { padding: 20px; font-size: 14px; }
     .detail-text-body--short div { font-size: 20px; }
     .detail-text-mark { font-size: 56px; }
     .detail-related { padding: 16px 20px 24px; }
     .detail-related-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .detail-board-picker {
+      bottom: auto;
+      top: calc(100% + 6px);
+    }
   }
 `;

@@ -37,6 +37,7 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [blockTypeFilter, setBlockTypeFilter] = useState<string>('all');
   const [tierFilter, setTierFilter] = useState<string>('all');
+  const [sortOrder, setSortOrder] = useState<string>('newest');
   const [tierVersion, setTierVersion] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [hiddenChannels, setHiddenChannels] = useState<Set<string>>(getHiddenChannels);
@@ -225,11 +226,27 @@ function App() {
         }
         return true;
       })
-      .sort((a, b) =>
-        new Date(b.block.connected_at || b.block.created_at).getTime() -
-        new Date(a.block.connected_at || a.block.created_at).getTime()
-      );
-  }, [selectedChannel, channelData, allBlocks, blockTypeFilter, tierFilter, tierVersion, searchQuery, viewingBoard, boards]);
+      .sort((a, b) => {
+        if (sortOrder === 'oldest') {
+          return new Date(a.block.connected_at || a.block.created_at).getTime() -
+            new Date(b.block.connected_at || b.block.created_at).getTime();
+        }
+        if (sortOrder === 'tier') {
+          const tierRank: Record<string, number> = { S: 0, A: 1, B: 2, C: 3 };
+          const ta = getTier(a.block.id);
+          const tb = getTier(b.block.id);
+          const ra = ta ? tierRank[ta] : 99;
+          const rb = tb ? tierRank[tb] : 99;
+          if (ra !== rb) return ra - rb;
+        }
+        if (sortOrder === 'random') {
+          return Math.random() - 0.5;
+        }
+        // default: newest
+        return new Date(b.block.connected_at || b.block.created_at).getTime() -
+          new Date(a.block.connected_at || a.block.created_at).getTime();
+      });
+  }, [selectedChannel, channelData, allBlocks, blockTypeFilter, tierFilter, tierVersion, searchQuery, viewingBoard, boards, sortOrder]);
 
   // Batch-load first channels in parallel on initial load
   useEffect(() => {
@@ -314,6 +331,8 @@ function App() {
           onBlockTypeFilterChange={setBlockTypeFilter}
           tierFilter={tierFilter}
           onTierFilterChange={setTierFilter}
+          sortOrder={sortOrder}
+          onSortOrderChange={setSortOrder}
           totalBlocks={blocks.length}
           selectedChannelTitle={currentTitle}
           selectMode={selectMode}
