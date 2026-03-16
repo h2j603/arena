@@ -54,6 +54,15 @@ function App() {
   // Add block modal
   const [showAddBlock, setShowAddBlock] = useState(false);
 
+  // Column count (0 = auto)
+  const [columnCount, setColumnCount] = useState<number>(() => {
+    try { return parseInt(localStorage.getItem('arena_col_count') || '0', 10); } catch { return 0; }
+  });
+  const handleColumnCountChange = useCallback((n: number) => {
+    setColumnCount(n);
+    localStorage.setItem('arena_col_count', String(n));
+  }, []);
+
   const channelDataRef = useRef(channelData);
   channelDataRef.current = channelData;
 
@@ -386,6 +395,8 @@ function App() {
           viewingBoard={!!viewingBoard}
           onExportBoard={handleExportBoard}
           onRefresh={handleRefresh}
+          columnCount={columnCount}
+          onColumnCountChange={handleColumnCountChange}
         />
         <BlockGrid
           blocks={blocks}
@@ -400,6 +411,7 @@ function App() {
           noteVersion={noteVersion}
           onNoteChange={() => setNoteVersion(v => v + 1)}
           tierVersion={tierVersion}
+          columnCount={columnCount}
         />
       </main>
 
