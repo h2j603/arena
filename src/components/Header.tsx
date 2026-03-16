@@ -3,6 +3,8 @@ interface Props {
   onSearchChange: (q: string) => void;
   blockTypeFilter: string;
   onBlockTypeFilterChange: (t: string) => void;
+  tierFilter: string;
+  onTierFilterChange: (t: string) => void;
   totalBlocks: number;
   selectedChannelTitle?: string;
 }
@@ -16,11 +18,23 @@ const BLOCK_TYPES = [
   { value: 'attachment', label: 'File' },
 ];
 
+const TIER_FILTERS = [
+  { value: 'all', label: 'All Tiers' },
+  { value: 'S', label: 'S' },
+  { value: 'A', label: 'A' },
+  { value: 'B', label: 'B' },
+  { value: 'C', label: 'C' },
+  { value: 'rated', label: 'Rated' },
+  { value: 'unrated', label: 'Unrated' },
+];
+
 export function Header({
   searchQuery,
   onSearchChange,
   blockTypeFilter,
   onBlockTypeFilterChange,
+  tierFilter,
+  onTierFilterChange,
   totalBlocks,
   selectedChannelTitle,
 }: Props) {
@@ -57,6 +71,16 @@ export function Header({
             key={t.value}
             className={`type-btn ${blockTypeFilter === t.value ? 'active' : ''}`}
             onClick={() => onBlockTypeFilterChange(t.value)}
+          >
+            {t.label}
+          </button>
+        ))}
+        <span className="filter-divider" />
+        {TIER_FILTERS.map((t) => (
+          <button
+            key={t.value}
+            className={`type-btn ${tierFilter === t.value ? 'active' : ''}`}
+            onClick={() => onTierFilterChange(t.value)}
           >
             {t.label}
           </button>
@@ -166,6 +190,13 @@ const headerStyles = `
     transition: all var(--transition-fast);
     letter-spacing: 0.2px;
     white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .filter-divider {
+    width: 1px;
+    height: 14px;
+    background: var(--border);
+    margin: 0 6px;
     flex-shrink: 0;
   }
   .type-btn:hover { color: var(--text-secondary); }

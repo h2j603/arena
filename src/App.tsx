@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { getSlug, getUserChannels, getChannelContents } from './api';
 import type { ArenaChannel, ArenaBlock } from './types';
+import { getTier } from './tiers';
 import { Sidebar } from './components/Sidebar';
 import { BlockGrid } from './components/BlockGrid';
 import { Header } from './components/Header';
@@ -32,6 +33,8 @@ function App() {
   const [loadingBlocks, setLoadingBlocks] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [blockTypeFilter, setBlockTypeFilter] = useState<string>('all');
+  const [tierFilter, setTierFilter] = useState<string>('all');
+  const [tierVersion, setTierVersion] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [hiddenChannels, setHiddenChannels] = useState<Set<string>>(getHiddenChannels);
 
@@ -129,6 +132,12 @@ function App() {
     return source
       .filter((item) => {
         if (blockTypeFilter !== 'all' && item.block.class.toLowerCase() !== blockTypeFilter) return false;
+        if (tierFilter !== 'all') {
+          const t = getTier(item.block.id);
+          if (tierFilter === 'rated' && !t) return false;
+          if (tierFilter === 'unrated' && t) return false;
+          if (['S', 'A', 'B', 'C'].includes(tierFilter) && t !== tierFilter) return false;
+        }
         if (searchQuery) {
           const q = searchQuery.toLowerCase();
           const title = (item.block.title || '').toLowerCase();
@@ -143,7 +152,7 @@ function App() {
         new Date(b.block.connected_at || b.block.created_at).getTime() -
         new Date(a.block.connected_at || a.block.created_at).getTime()
       );
-  }, [selectedChannel, channelData, allBlocks, blockTypeFilter, searchQuery]);
+  }, [selectedChannel, channelData, allBlocks, blockTypeFilter, tierFilter, tierVersion, searchQuery]);
 
   // Batch-load first channels in parallel on initial load
   useEffect(() => {
@@ -202,6 +211,8 @@ function App() {
           onSearchChange={setSearchQuery}
           blockTypeFilter={blockTypeFilter}
           onBlockTypeFilterChange={setBlockTypeFilter}
+          tierFilter={tierFilter}
+          onTierFilterChange={setTierFilter}
           totalBlocks={blocks.length}
           selectedChannelTitle={selectedChannel ? channelData.get(selectedChannel)?.channel.title : undefined}
         />
@@ -209,6 +220,7 @@ function App() {
           blocks={blocks}
           allBlocks={allBlocks}
           loading={loadingBlocks && blocks.length === 0}
+          onTierChange={() => setTierVersion(v => v + 1)}
         />
       </main>
     </div>

@@ -1,14 +1,16 @@
 import { useState, memo } from 'react';
 import type { ArenaBlock } from '../types';
 import { BlockDetail } from './BlockDetail';
+import { getTier, TIER_COLORS } from '../tiers';
 
 interface Props {
   blocks: { block: ArenaBlock; channelTitle: string }[];
   allBlocks: { block: ArenaBlock; channelTitle: string }[];
   loading: boolean;
+  onTierChange: () => void;
 }
 
-export function BlockGrid({ blocks, allBlocks, loading }: Props) {
+export function BlockGrid({ blocks, allBlocks, loading, onTierChange }: Props) {
   const [selectedBlock, setSelectedBlock] = useState<{ block: ArenaBlock; channelTitle: string } | null>(null);
 
   if (loading) {
@@ -44,6 +46,7 @@ export function BlockGrid({ blocks, allBlocks, loading }: Props) {
           allBlocks={allBlocks}
           onClose={() => setSelectedBlock(null)}
           onSelectBlock={(item) => setSelectedBlock(item)}
+          onTierChange={onTierChange}
         />
       )}
       <style>{gridStyles}</style>
@@ -63,6 +66,11 @@ const BlockCard = memo(function BlockCard({
   const [imgLoaded, setImgLoaded] = useState(false);
   const content = block.content || '';
   const isShortText = block.class === 'Text' && content.length < 140;
+  const tier = getTier(block.id);
+
+  const tierBadge = tier ? (
+    <span className="b-tier" style={{ background: TIER_COLORS[tier] }}>{tier}</span>
+  ) : null;
 
   // Image block
   if (block.image) {
@@ -75,6 +83,7 @@ const BlockCard = memo(function BlockCard({
           onLoad={() => setImgLoaded(true)}
           className={`b-img ${imgLoaded ? 'b-img--loaded' : ''}`}
         />
+        {tierBadge}
         <span className="b-ch">{channelTitle}</span>
       </div>
     );
@@ -84,6 +93,7 @@ const BlockCard = memo(function BlockCard({
   if (block.class === 'Text') {
     return (
       <div className={`b b-text ${isShortText ? 'b-text--short' : 'b-text--long'}`} onClick={onClick}>
+        {tierBadge}
         <p className="b-text-content">{content.slice(0, isShortText ? 140 : 360)}</p>
         {!isShortText && <div className="b-text-fade" />}
         <span className="b-ch b-ch--inside">{channelTitle}</span>
@@ -99,6 +109,7 @@ const BlockCard = memo(function BlockCard({
     })();
     return (
       <div className="b b-link" onClick={onClick}>
+        {tierBadge}
         <span className="b-link-title">{block.source?.title || block.title || 'Untitled'}</span>
         {domain && <span className="b-link-domain">{domain}</span>}
         <span className="b-ch b-ch--inside">{channelTitle}</span>
@@ -109,6 +120,7 @@ const BlockCard = memo(function BlockCard({
   // Fallback
   return (
     <div className="b b-fallback" onClick={onClick}>
+      {tierBadge}
       <span className="b-fallback-type">{block.class}</span>
       {block.title && <span className="b-fallback-title">{block.title}</span>}
       <span className="b-ch b-ch--inside">{channelTitle}</span>
@@ -150,6 +162,28 @@ const gridStyles = `
     width: 100%;
     cursor: pointer;
     position: relative;
+  }
+
+  /* --- Tier badge --- */
+  .b-tier {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    font-size: 9px;
+    font-weight: 700;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    pointer-events: none;
+    line-height: 1;
+  }
+  .b-text .b-tier, .b-link .b-tier, .b-fallback .b-tier {
+    position: absolute;
   }
 
   /* --- Image --- */

@@ -5,31 +5,23 @@ interface BlockItem {
   channelTitle: string;
 }
 
-interface RecommendResult {
-  relatedIds: number[];
-  searchQuery: string;
-}
-
-const cache = new Map<number, RecommendResult>();
+const cache = new Map<number, number[]>();
 
 export async function findRelated(
   target: BlockItem,
   allBlocks: BlockItem[],
-): Promise<{ related: BlockItem[]; searchQuery: string }> {
+): Promise<BlockItem[]> {
   const cached = cache.get(target.block.id);
   if (cached) {
-    const related = cached.relatedIds
+    return cached
       .map(id => allBlocks.find(b => b.block.id === id))
       .filter((b): b is BlockItem => b !== undefined);
-    return { related, searchQuery: cached.searchQuery };
   }
 
   const targetDesc = describeBlock(target);
-
-  // Build a compact list of all other blocks
   const others = allBlocks
     .filter(b => b.block.id !== target.block.id)
-    .slice(0, 120); // limit for token budget
+    .slice(0, 120);
 
   const othersList = others.map(b => {
     const title = b.block.title || 'Untitled';
@@ -47,41 +39,34 @@ ${targetDesc}
 Other references in their archive:
 ${othersList}
 
-Tasks:
-1. Pick the 6 most visually/thematically related references from the list above
-2. Generate a concise Google search query (in English) to find the original source or similar external works for this reference. Think about what an art director would search for.
+Pick the 6 most visually/thematically related references from the list above.
 
 Return ONLY valid JSON:
-{"relatedIds":[id1,id2,...],"searchQuery":"the search query"}`;
+{"relatedIds":[id1,id2,...]}`;
 
   const response = await fetch('/api/categorize', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
+      max_tokens: 512,
       messages: [{ role: 'user', content: prompt }],
     }),
   });
 
-  if (!response.ok) {
-    throw new Error(`API ${response.status}`);
-  }
+  if (!response.ok) throw new Error(`API ${response.status}`);
 
   const data = await response.json();
   const text = data.content[0].text;
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('Invalid response');
 
-  const parsed: RecommendResult = JSON.parse(jsonMatch[0]);
+  const parsed: { relatedIds: number[] } = JSON.parse(jsonMatch[0]);
+  cache.set(target.block.id, parsed.relatedIds);
 
-  cache.set(target.block.id, parsed);
-
-  const related = parsed.relatedIds
+  return parsed.relatedIds
     .map(id => allBlocks.find(b => b.block.id === id))
     .filter((b): b is BlockItem => b !== undefined);
-
-  return { related, searchQuery: parsed.searchQuery };
 }
 
 function describeBlock(item: BlockItem): string {
