@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import type { ArenaChannel } from '../types';
 import { clearToken } from '../api';
+import type { Board } from '../boards';
+import { getChannelColor } from '../channelColors';
 
 interface Props {
   channels: ArenaChannel[];
@@ -10,9 +12,15 @@ interface Props {
   loadedChannels: Set<string>;
   hiddenChannels: Set<string>;
   onToggleHidden: (slug: string) => void;
+  boards: Board[];
+  viewingBoard: string | null;
+  onViewBoard: (id: string | null) => void;
+  onDeleteBoard: (id: string) => void;
+  theme: string;
+  onThemeChange: (t: string) => void;
 }
 
-export function Sidebar({ channels, selectedChannel, onSelectChannel, username, loadedChannels, hiddenChannels, onToggleHidden }: Props) {
+export function Sidebar({ channels, selectedChannel, onSelectChannel, username, loadedChannels: _loadedChannels, hiddenChannels, onToggleHidden, boards, viewingBoard, onViewBoard, onDeleteBoard, theme, onThemeChange }: Props) {
   const [search, setSearch] = useState('');
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -82,6 +90,44 @@ export function Sidebar({ channels, selectedChannel, onSelectChannel, username, 
           <span className="sidebar-item-num">{channels.length}</span>
         </button>
 
+        {boards.length > 0 && (
+          <>
+            <div className="sidebar-sep" />
+            <div className="sidebar-section-label">Boards</div>
+            {boards.map((board) => (
+              <div key={board.id} className="sidebar-row">
+                <button
+                  className={`sidebar-item ${viewingBoard === board.id ? 'active' : ''}`}
+                  onClick={() => { onViewBoard(board.id); setMobileOpen(false); }}
+                >
+                  <span className="sidebar-item-label">
+                    <span className="sidebar-board-icon">
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                        <rect x="0.5" y="0.5" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="0.8"/>
+                        <rect x="5.5" y="0.5" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="0.8"/>
+                        <rect x="0.5" y="5.5" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="0.8"/>
+                        <rect x="5.5" y="5.5" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="0.8"/>
+                      </svg>
+                    </span>
+                    {board.name}
+                  </span>
+                  <span className="sidebar-item-num">{board.blockIds.length}</span>
+                </button>
+                <button
+                  className="sidebar-vis"
+                  onClick={(e) => { e.stopPropagation(); onDeleteBoard(board.id); }}
+                  title="Delete board"
+                  style={{ opacity: 0.3 }}
+                >
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+                    <path d="M3 3l5 5M8 3l-5 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </>
+        )}
+
         <div className="sidebar-sep" />
 
         {filtered.map((ch) => (
@@ -91,7 +137,7 @@ export function Sidebar({ channels, selectedChannel, onSelectChannel, username, 
               onClick={() => { onSelectChannel(ch.slug); setMobileOpen(false); }}
             >
               <span className="sidebar-item-label">
-                {loadedChannels.has(ch.slug) && <span className="sidebar-dot" />}
+                <span className="sidebar-ch-dot" style={{ background: getChannelColor(ch.title) }} />
                 {ch.title}
               </span>
               <span className="sidebar-item-num">{ch.length}</span>
@@ -117,9 +163,29 @@ export function Sidebar({ channels, selectedChannel, onSelectChannel, username, 
       </nav>
 
       <div className="sidebar-footer">
-        <button className="sidebar-disconnect" onClick={() => { clearToken(); window.location.reload(); }}>
-          Disconnect
-        </button>
+        <div className="sidebar-footer-row">
+          <button className="sidebar-disconnect" onClick={() => { clearToken(); window.location.reload(); }}>
+            Disconnect
+          </button>
+          <div className="theme-toggle">
+            {(['auto', 'light', 'dark'] as const).map(t => (
+              <button
+                key={t}
+                className={`theme-btn ${theme === t ? 'theme-btn--active' : ''}`}
+                onClick={() => onThemeChange(t)}
+                title={t === 'auto' ? 'System' : t === 'light' ? 'Light' : 'Dark'}
+              >
+                {t === 'auto' ? (
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.1"/><path d="M5.5 1.5v8" stroke="currentColor" strokeWidth="1.1"/><path d="M5.5 1.5A4 4 0 005.5 9.5" fill="currentColor"/></svg>
+                ) : t === 'light' ? (
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="2.5" stroke="currentColor" strokeWidth="1.1"/><path d="M5.5 1v1M5.5 9v1M1 5.5h1M9 5.5h1M2.3 2.3l.7.7M8 8l.7.7M8.7 2.3l-.7.7M3 8l-.7.7" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/></svg>
+                ) : (
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M9.3 6.8A4 4 0 014.2 1.7 4.5 4.5 0 105.5 10a4.5 4.5 0 003.8-3.2z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/></svg>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     </>
   );
@@ -206,11 +272,11 @@ const sidebarStyles = `
     gap: 1px;
   }
   .sidebar-title {
-    font-family: var(--font-serif);
-    font-size: 20px;
-    font-weight: 400;
-    letter-spacing: -0.3px;
-    line-height: 1.2;
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    line-height: 1;
   }
   .sidebar-user {
     font-size: 11px;
@@ -306,6 +372,12 @@ const sidebarStyles = `
     background: var(--text-muted);
     flex-shrink: 0;
   }
+  .sidebar-ch-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
   .sidebar-item-num {
     color: var(--text-muted);
     font-size: 10px;
@@ -329,6 +401,18 @@ const sidebarStyles = `
   .sidebar-row:hover .sidebar-vis { opacity: 1; }
   .sidebar-vis.is-hidden { opacity: 0.5; }
   .sidebar-vis:hover { color: var(--text-secondary); }
+  .sidebar-section-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--text-muted);
+    padding: 6px 8px 2px;
+  }
+  .sidebar-board-icon {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
   .sidebar-sep {
     height: 1px;
     background: var(--border);
@@ -346,6 +430,32 @@ const sidebarStyles = `
     transition: color var(--transition-fast);
   }
   .sidebar-disconnect:hover { color: var(--text); }
+  .sidebar-footer-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .theme-toggle {
+    display: flex;
+    gap: 2px;
+    background: var(--accent-soft);
+    border-radius: var(--radius);
+    padding: 2px;
+  }
+  .theme-btn {
+    padding: 3px 5px;
+    border-radius: 3px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    transition: all var(--transition-fast);
+  }
+  .theme-btn:hover { color: var(--text-secondary); }
+  .theme-btn--active {
+    background: var(--bg-card);
+    color: var(--text);
+    box-shadow: var(--shadow-sm);
+  }
 
   /* Mobile */
   .mobile-menu-btn {

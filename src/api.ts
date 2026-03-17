@@ -36,7 +36,7 @@ async function apiFetch<T>(path: string): Promise<T> {
   if (accessToken) {
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
-  const res = await fetch(url, { headers });
+  const res = await fetch(url, { headers, cache: 'no-store' });
   if (!res.ok) {
     const body = await res.text().catch(() => '');
     throw new Error(`API ${res.status}: ${body || res.statusText}`);
@@ -57,6 +57,30 @@ export async function getUserChannels(slug: string): Promise<ArenaChannel[]> {
     page++;
   }
   return channels;
+}
+
+export async function addBlockToChannel(
+  channelSlug: string,
+  source: string,
+): Promise<ArenaBlock> {
+  const url = `${BASE_URL}/channels/${channelSlug}/blocks`;
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+
+  // Detect if it's a URL or text content
+  const isUrl = /^https?:\/\//i.test(source.trim());
+  const body = isUrl
+    ? { source: source.trim() }
+    : { content: source.trim() };
+
+  const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`API ${res.status}: ${text || res.statusText}`);
+  }
+  return res.json();
 }
 
 export async function getChannelContents(slug: string): Promise<{ channel: ArenaChannel; blocks: ArenaBlock[] }> {

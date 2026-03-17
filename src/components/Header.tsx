@@ -1,23 +1,30 @@
-import { useRef, useEffect } from 'react';
-import type { ViewMode } from '../types';
+import { useState, useEffect } from 'react';
 
 interface Props {
-  viewMode: ViewMode;
-  onViewModeChange: (mode: ViewMode) => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
   blockTypeFilter: string;
   onBlockTypeFilterChange: (t: string) => void;
+  tierFilter: string;
+  onTierFilterChange: (t: string) => void;
+  sortOrder: string;
+  onSortOrderChange: (s: string) => void;
   totalBlocks: number;
   selectedChannelTitle?: string;
-  categories: string[] | null;
-  selectedCategory: string | null;
-  onSelectCategory: (cat: string | null) => void;
-  onCategorize: () => void;
-  onClearCategories: () => void;
-  isCategorizing: boolean;
-  categorizeError: string | null;
-  hasBlocks: boolean;
+  selectMode: boolean;
+  selectedCount: number;
+  onToggleSelectMode: () => void;
+  onCreateBoard: (name: string) => void;
+  onShowAddBlock: () => void;
+  hasSelectedChannel: boolean;
+  viewingBoard?: boolean;
+  viewingBoardId?: string | null;
+  boardDescription?: string;
+  onUpdateBoardDescription?: (id: string, desc: string) => void;
+  onExportBoard?: () => void;
+  onRefresh?: () => void;
+  columnCount: number;
+  onColumnCountChange: (n: number) => void;
 }
 
 const BLOCK_TYPES = [
@@ -29,161 +36,253 @@ const BLOCK_TYPES = [
   { value: 'attachment', label: 'File' },
 ];
 
+const TIER_FILTERS = [
+  { value: 'all', label: 'All Tiers' },
+  { value: 'S', label: 'S' },
+  { value: 'A', label: 'A' },
+  { value: 'B', label: 'B' },
+  { value: 'C', label: 'C' },
+  { value: 'rated', label: 'Rated' },
+  { value: 'unrated', label: 'Unrated' },
+];
+
+const SORT_OPTIONS = [
+  { value: 'newest', label: 'Newest' },
+  { value: 'oldest', label: 'Oldest' },
+  { value: 'tier', label: 'By Tier' },
+  { value: 'random', label: 'Random' },
+];
+
+const COLUMN_OPTIONS = [
+  { value: 0, label: 'Auto', icon: 'Auto' },
+  { value: 2, label: '2 columns', icon: '2' },
+  { value: 3, label: '3 columns', icon: '3' },
+  { value: 4, label: '4 columns', icon: '4' },
+  { value: 5, label: '5 columns', icon: '5' },
+];
+
 export function Header({
-  viewMode,
-  onViewModeChange,
   searchQuery,
   onSearchChange,
   blockTypeFilter,
   onBlockTypeFilterChange,
+  tierFilter,
+  onTierFilterChange,
+  sortOrder,
+  onSortOrderChange,
   totalBlocks,
   selectedChannelTitle,
-  categories,
-  selectedCategory,
-  onSelectCategory,
-  onCategorize,
-  onClearCategories,
-  isCategorizing,
-  categorizeError,
-  hasBlocks,
+  selectMode,
+  selectedCount,
+  onToggleSelectMode,
+  onCreateBoard,
+  onShowAddBlock,
+  hasSelectedChannel,
+  viewingBoard,
+  onExportBoard,
+  onRefresh,
+  columnCount,
+  onColumnCountChange,
+  viewingBoardId,
+  boardDescription,
+  onUpdateBoardDescription,
 }: Props) {
-  const catScrollRef = useRef<HTMLDivElement>(null);
+  const [boardName, setBoardName] = useState('');
+  const [showNameInput, setShowNameInput] = useState(false);
+  const [editingDesc, setEditingDesc] = useState(false);
+  const [descText, setDescText] = useState(boardDescription || '');
 
-  // Scroll active category into view
+  // Sync description text when switching boards
   useEffect(() => {
-    if (!catScrollRef.current || !selectedCategory) return;
-    const active = catScrollRef.current.querySelector('.cat-tab.active') as HTMLElement;
-    if (active) {
-      active.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    setDescText(boardDescription || '');
+    setEditingDesc(false);
+  }, [viewingBoardId, boardDescription]);
+
+  const handleCreateBoard = () => {
+    if (!showNameInput) {
+      setShowNameInput(true);
+      return;
     }
-  }, [selectedCategory]);
+    const name = boardName.trim() || `Board ${new Date().toLocaleDateString('ko-KR')}`;
+    onCreateBoard(name);
+    setBoardName('');
+    setShowNameInput(false);
+  };
 
   return (
     <header className="header">
-      {/* Primary bar: title + controls */}
       <div className="header-bar">
         <div className="header-identity">
-          <h2 className="header-title">
-            {selectedChannelTitle || 'All References'}
-          </h2>
-          <span className="header-count">{totalBlocks}</span>
-        </div>
-
-        <div className="header-controls">
-          <div className="header-types">
-            {BLOCK_TYPES.map((t) => (
-              <button
-                key={t.value}
-                className={`type-btn ${blockTypeFilter === t.value ? 'active' : ''}`}
-                onClick={() => onBlockTypeFilterChange(t.value)}
-              >
-                {t.label}
-              </button>
-            ))}
+          <div className="header-title-wrap">
+            <h2 className="header-title">
+              {selectedChannelTitle || 'All References'}
+            </h2>
+            <span className="header-count">{totalBlocks}</span>
           </div>
-
-          <div className="header-actions">
-            <div className="search-wrap">
-              <svg className="search-icon" width="13" height="13" viewBox="0 0 13 13" fill="none">
-                <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.3"/>
-                <path d="M8.5 8.5L11.5 11.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-              </svg>
-              <input
-                type="text"
-                className="header-search"
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => onSearchChange(e.target.value)}
-              />
-            </div>
-            <div className="view-toggle">
-              <button
-                className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`}
-                onClick={() => onViewModeChange('grid')}
-                title="Grid view"
-              >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
-                  <rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
-                  <rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
-                  <rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
-                </svg>
-              </button>
-              <button
-                className={`view-btn ${viewMode === 'graph' ? 'active' : ''}`}
-                onClick={() => onViewModeChange('graph')}
-                title="Graph view"
-              >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <circle cx="3" cy="4" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
-                  <circle cx="11" cy="3" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
-                  <circle cx="7" cy="11" r="1.8" stroke="currentColor" strokeWidth="1.2"/>
-                  <line x1="4.5" y1="4.8" x2="6" y2="9.5" stroke="currentColor" strokeWidth="1"/>
-                  <line x1="9.5" y1="4" x2="8" y2="9.5" stroke="currentColor" strokeWidth="1"/>
-                  <line x1="4.8" y1="3.5" x2="9.2" y2="3" stroke="currentColor" strokeWidth="1"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Category navigation strip */}
-      {hasBlocks && (
-        <div className="header-cat-strip">
-          {categories ? (
-            <div className="cat-scroll" ref={catScrollRef}>
-              <button
-                className={`cat-tab ${selectedCategory === null ? 'active' : ''}`}
-                onClick={() => onSelectCategory(null)}
-              >
-                All
-              </button>
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  className={`cat-tab ${selectedCategory === cat ? 'active' : ''}`}
-                  onClick={() => onSelectCategory(selectedCategory === cat ? null : cat)}
+          {viewingBoard && viewingBoardId && (
+            <div className="header-board-desc">
+              {editingDesc ? (
+                <input
+                  className="header-board-desc-input"
+                  value={descText}
+                  onChange={e => setDescText(e.target.value)}
+                  placeholder="Add a description..."
+                  autoFocus
+                  onBlur={() => {
+                    onUpdateBoardDescription?.(viewingBoardId, descText);
+                    setEditingDesc(false);
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      onUpdateBoardDescription?.(viewingBoardId, descText);
+                      setEditingDesc(false);
+                    }
+                    if (e.key === 'Escape') {
+                      setDescText(boardDescription || '');
+                      setEditingDesc(false);
+                    }
+                  }}
+                />
+              ) : (
+                <span
+                  className="header-board-desc-text"
+                  onClick={() => { setDescText(boardDescription || ''); setEditingDesc(true); }}
                 >
-                  {cat}
-                </button>
-              ))}
-              <div className="cat-actions">
-                <button
-                  className="cat-refresh"
-                  onClick={onCategorize}
-                  disabled={isCategorizing}
-                  title="Re-curate"
-                >
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className={isCategorizing ? 'spinning' : ''}>
-                    <path d="M10.5 2v3h-3M1.5 10V7h3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <path d="M2.3 4.5A4.5 4.5 0 0 1 10 3.5M9.7 7.5A4.5 4.5 0 0 1 2 8.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                  </svg>
-                </button>
-                <button className="cat-clear" onClick={onClearCategories} title="Clear curation">
-                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-                    <path d="M2.5 2.5l6 6M8.5 2.5l-6 6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-                  </svg>
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="cat-loading-state">
-              {isCategorizing ? (
-                <div className="cat-curating">
-                  <div className="cat-curating-spinner" />
-                  <span>Curating your archive...</span>
-                </div>
-              ) : categorizeError ? (
-                <div className="cat-error-state">
-                  <span className="cat-error-msg">{categorizeError.slice(0, 60)}</span>
-                  <button className="cat-retry-btn" onClick={onCategorize}>Retry</button>
-                </div>
-              ) : null}
+                  {boardDescription || 'Add a description...'}
+                </span>
+              )}
             </div>
           )}
         </div>
-      )}
+
+        <div className="header-actions">
+          {selectMode ? (
+            <div className="select-bar">
+              <span className="select-count">{selectedCount} selected</span>
+              {showNameInput && (
+                <input
+                  className="board-name-input"
+                  placeholder="Board name..."
+                  value={boardName}
+                  onChange={e => setBoardName(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleCreateBoard(); }}
+                  autoFocus
+                />
+              )}
+              <button
+                className="header-btn header-btn--primary"
+                onClick={handleCreateBoard}
+                disabled={selectedCount === 0}
+              >
+                {showNameInput ? 'Save' : 'Create Board'}
+              </button>
+              <button className="header-btn" onClick={() => { onToggleSelectMode(); setShowNameInput(false); }}>
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <>
+              <button className="header-btn" onClick={onToggleSelectMode} title="Select blocks to create a moodboard">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2"/>
+                  <rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2"/>
+                  <rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2"/>
+                  <rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2"/>
+                </svg>
+                Board
+              </button>
+              {viewingBoard && onExportBoard && (
+                <button className="header-btn" onClick={onExportBoard} title="Save board as PNG">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M2 9v2.5a.5.5 0 00.5.5h9a.5.5 0 00.5-.5V9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                    <path d="M7 2v7M4.5 6.5L7 9l2.5-2.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  PNG
+                </button>
+              )}
+              {hasSelectedChannel && (
+                <button className="header-btn" onClick={onShowAddBlock} title="Add a block to this channel">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                  </svg>
+                  Add
+                </button>
+              )}
+              {onRefresh && (
+                <button className="header-btn header-btn--refresh" onClick={onRefresh} title="Refresh">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M11.5 7a4.5 4.5 0 11-1.3-3.2M10.2 2v1.8H12" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+              )}
+              <div className="search-wrap">
+                <svg className="search-icon" width="13" height="13" viewBox="0 0 13 13" fill="none">
+                  <circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.3"/>
+                  <path d="M8.5 8.5L11.5 11.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                </svg>
+                <input
+                  type="text"
+                  className="header-search"
+                  placeholder="Search ( / )"
+                  value={searchQuery}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  id="header-search-input"
+                />
+                {searchQuery && (
+                  <button className="search-clear" onClick={() => onSearchChange('')} title="Clear search">
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                      <path d="M2.5 2.5l5 5M7.5 2.5l-5 5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="header-types-strip">
+        {BLOCK_TYPES.map((t) => (
+          <button
+            key={t.value}
+            className={`type-btn ${blockTypeFilter === t.value ? 'active' : ''}`}
+            onClick={() => onBlockTypeFilterChange(t.value)}
+          >
+            {t.label}
+          </button>
+        ))}
+        <span className="filter-divider" />
+        {TIER_FILTERS.map((t) => (
+          <button
+            key={t.value}
+            className={`type-btn ${tierFilter === t.value ? 'active' : ''}`}
+            onClick={() => onTierFilterChange(t.value)}
+          >
+            {t.label}
+          </button>
+        ))}
+        <span className="filter-divider" />
+        {SORT_OPTIONS.map((s) => (
+          <button
+            key={s.value}
+            className={`type-btn ${sortOrder === s.value ? 'active' : ''}`}
+            onClick={() => onSortOrderChange(s.value)}
+          >
+            {s.label}
+          </button>
+        ))}
+        <span className="filter-divider" />
+        {COLUMN_OPTIONS.map((c) => (
+          <button
+            key={c.value}
+            className={`type-btn col-btn ${columnCount === c.value ? 'active' : ''}`}
+            onClick={() => onColumnCountChange(c.value)}
+            title={c.label}
+          >
+            {c.icon}
+          </button>
+        ))}
+      </div>
 
       <style>{headerStyles}</style>
     </header>
@@ -197,73 +296,129 @@ const headerStyles = `
     z-index: 50;
     background: var(--bg);
     border-bottom: 1px solid var(--border);
+    max-width: 100vw;
+    overflow: hidden;
   }
 
-  /* Primary bar */
   .header-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 20px;
+    gap: 16px;
     padding: 0 28px;
-    height: var(--header-height);
+    height: 60px;
   }
   .header-identity {
     display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+    gap: 0;
+  }
+  .header-title-wrap {
+    display: flex;
     align-items: baseline;
     gap: 8px;
-    flex-shrink: 0;
-    min-width: 0;
+  }
+  .header-board-desc {
+    margin-top: -2px;
+  }
+  .header-board-desc-text {
+    font-size: 11px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color var(--transition-fast);
+  }
+  .header-board-desc-text:hover { color: var(--text-secondary); }
+  .header-board-desc-input {
+    font-size: 11px;
+    font-family: inherit;
+    color: var(--text);
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    outline: none;
+    padding: 0 0 2px;
+    width: 240px;
   }
   .header-title {
-    font-family: var(--font-serif);
-    font-size: 20px;
-    font-weight: 400;
-    letter-spacing: -0.3px;
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    line-height: 1;
   }
   .header-count {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+  }
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .header-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+  }
+  .header-btn:hover {
+    border-color: var(--text-muted);
+    color: var(--text);
+  }
+  .header-btn--primary {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+  }
+  .header-btn--primary:hover {
+    opacity: 0.85;
+    color: var(--bg);
+  }
+  .header-btn:disabled {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  .select-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .select-count {
     font-size: 11px;
     color: var(--text-muted);
     font-variant-numeric: tabular-nums;
   }
-
-  .header-controls {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    flex-shrink: 0;
-  }
-
-  /* Type filters */
-  .header-types {
-    display: flex;
-    gap: 1px;
-    background: var(--border-light);
+  .board-name-input {
+    padding: 5px 10px;
+    border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 2px;
-  }
-  .type-btn {
-    padding: 3px 10px;
-    font-size: 11px;
-    color: var(--text-muted);
-    border-radius: 3px;
-    transition: all var(--transition-fast);
-    letter-spacing: 0.2px;
-  }
-  .type-btn:hover {
-    color: var(--text-secondary);
-  }
-  .type-btn.active {
+    background: transparent;
     color: var(--text);
-    background: var(--bg-card);
-    box-shadow: var(--shadow-sm);
-    font-weight: 500;
+    font-size: 11px;
+    font-family: inherit;
+    outline: none;
+    width: 140px;
+    transition: border-color var(--transition);
   }
+  .board-name-input:focus { border-color: var(--text-muted); }
+  .board-name-input::placeholder { color: var(--text-muted); }
 
-  /* Search */
   .search-wrap {
     position: relative;
     display: flex;
@@ -287,165 +442,83 @@ const headerStyles = `
     width: 150px;
     transition: all var(--transition);
   }
-  .header-search::placeholder { color: var(--text-muted); }
+  .header-search::placeholder { color: var(--text-muted); font-size: 11px; }
+  .search-clear {
+    position: absolute;
+    right: 6px;
+    display: flex;
+    align-items: center;
+    padding: 2px;
+    color: var(--text-muted);
+    border-radius: 50%;
+    transition: color var(--transition-fast);
+  }
+  .search-clear:hover { color: var(--text); }
   .header-search:focus {
     border-color: var(--text-muted);
     width: 200px;
     background: var(--bg-card);
   }
 
-  .header-actions {
+  .header-types-strip {
     display: flex;
+    gap: 1px;
+    padding: 0 28px;
+    border-top: 1px solid var(--border-light);
+    height: 32px;
     align-items: center;
-    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
   }
-
-  /* View toggle */
-  .view-toggle {
-    display: flex;
-    gap: 2px;
-    background: var(--border-light);
-    border-radius: var(--radius);
-    padding: 2px;
-  }
-  .view-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 4px 6px;
+  .header-types-strip::-webkit-scrollbar { display: none; }
+  .type-btn {
+    padding: 3px 10px;
+    font-size: 11px;
     color: var(--text-muted);
     border-radius: 3px;
     transition: all var(--transition-fast);
-  }
-  .view-btn:hover { color: var(--text-secondary); }
-  .view-btn.active {
-    color: var(--text);
-    background: var(--bg-card);
-    box-shadow: var(--shadow-sm);
-  }
-
-  /* Category strip */
-  .header-cat-strip {
-    border-top: 1px solid var(--border-light);
-    min-height: 36px;
-    display: flex;
-    align-items: center;
-  }
-  .cat-scroll {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    padding: 4px 28px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    flex: 1;
-  }
-  .cat-scroll::-webkit-scrollbar { display: none; }
-
-  .cat-tab {
-    font-size: 11px;
-    padding: 4px 12px;
-    color: var(--text-muted);
+    letter-spacing: 0.2px;
     white-space: nowrap;
-    border-radius: 20px;
-    transition: all var(--transition-fast);
-    letter-spacing: 0.1px;
-  }
-  .cat-tab:hover {
-    color: var(--text-secondary);
-    background: var(--accent-soft);
-  }
-  .cat-tab.active {
-    color: var(--tag-active-text);
-    background: var(--tag-active);
-    font-weight: 500;
-  }
-
-  .cat-actions {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    margin-left: 8px;
-    padding-left: 8px;
-    border-left: 1px solid var(--border-light);
     flex-shrink: 0;
   }
-  .cat-refresh, .cat-clear {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 4px;
-    color: var(--text-muted);
-    border-radius: var(--radius);
-    transition: all var(--transition-fast);
+  .filter-divider {
+    width: 1px;
+    height: 14px;
+    background: var(--border);
+    margin: 0 6px;
+    flex-shrink: 0;
   }
-  .cat-refresh:hover, .cat-clear:hover {
-    color: var(--text-secondary);
+  .type-btn:hover { color: var(--text-secondary); }
+  .type-btn.active {
+    color: var(--text);
+    font-weight: 500;
     background: var(--accent-soft);
   }
-  .cat-refresh:disabled { opacity: 0.4; cursor: wait; }
-  .cat-refresh .spinning {
-    animation: spin 0.8s linear infinite;
+  .col-btn {
+    font-variant-numeric: tabular-nums;
+    min-width: 28px;
+    text-align: center;
   }
-
-  /* Loading/error states */
-  .cat-loading-state {
-    padding: 0 28px;
-    display: flex;
-    align-items: center;
-    height: 36px;
-  }
-  .cat-curating {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 11px;
-    color: var(--text-muted);
-  }
-  .cat-curating-spinner {
-    width: 12px;
-    height: 12px;
-    border: 1.5px solid var(--border);
-    border-top-color: var(--text-muted);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-  .cat-error-state {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .cat-error-msg {
-    font-size: 11px;
-    color: #b55;
-  }
-  .cat-retry-btn {
-    font-size: 11px;
-    color: var(--text-muted);
-    text-decoration: underline;
-    text-underline-offset: 2px;
-  }
-  .cat-retry-btn:hover { color: var(--text); }
 
   @media (max-width: 768px) {
     .header-bar {
       padding: 0 14px 0 48px;
       gap: 8px;
-      height: 46px;
-      flex-wrap: wrap;
+      height: 52px;
     }
-    .header-identity {
-      flex: 1;
-      min-width: 0;
+    .header-title { font-size: 18px; letter-spacing: -0.3px; }
+    .header-search { width: 90px; font-size: 11px; padding-left: 24px; }
+    .header-search:focus { width: 120px; }
+    .search-icon { left: 6px; }
+    .header-btn { font-size: 10px; padding: 4px 8px; gap: 3px; }
+    .search-clear { padding: 6px; }
+    .board-name-input { width: 100px; font-size: 10px; }
+
+    .header-types-strip {
+      padding: 0 14px;
+      height: 30px;
+      gap: 0;
     }
-    .header-title { font-size: 17px; }
-    .header-types { display: none; }
-    .header-search { width: 100px; font-size: 11px; }
-    .header-search:focus { width: 140px; }
-    .cat-scroll {
-      padding: 4px 14px;
-    }
-    .cat-tab { font-size: 10px; padding: 3px 10px; }
-    .cat-loading-state { padding: 0 14px; }
+    .type-btn { font-size: 10px; padding: 2px 8px; }
   }
 `;
