@@ -6,6 +6,9 @@ import { getChannelColor } from '../channelColors';
 import { hasNote, getNote, setNote } from '../notes';
 import { getTier, TIER_COLORS } from '../tiers';
 
+const TIER_LABELS: Record<string, string> = { S: 'S Tier', A: 'A Tier', B: 'B Tier', C: 'C Tier', unrated: 'Unrated' };
+const TIER_LABEL_COLORS: Record<string, string> = { S: '#e53e3e', A: '#ed8936', B: '#4299e1', C: '#93918c', unrated: 'var(--text-muted)' };
+
 interface Props {
   blocks: { block: ArenaBlock; channelTitle: string }[];
   allBlocks: { block: ArenaBlock; channelTitle: string }[];
@@ -65,31 +68,7 @@ export function BlockGrid({ blocks, allBlocks, loading, onTierChange, selectMode
     return () => ro.disconnect();
   }, [updateCols]);
 
-  // (columns computed inline via renderGrid)
-
-  if (loading) {
-    return <div className="grid-loading"><div className="loading-spinner" /></div>;
-  }
-
-  if (blocks.length === 0) {
-    return (
-      <div className="grid-empty">
-        <p className="grid-empty-title">No references found</p>
-        <p className="grid-empty-sub">
-          {hasActiveFilters
-            ? 'No blocks match your current filters'
-            : 'Select a channel from the sidebar to explore'}
-        </p>
-        {hasActiveFilters && onClearFilters && (
-          <button className="grid-empty-clear" onClick={onClearFilters}>
-            Clear all filters
-          </button>
-        )}
-      </div>
-    );
-  }
-
-  // Tier grouping when sorted by tier
+  // Tier grouping when sorted by tier (must be before early returns - Rules of Hooks)
   const tierGroups = useMemo(() => {
     if (sortOrder !== 'tier') return null;
     const groups: { tier: string; items: { block: ArenaBlock; channelTitle: string }[] }[] = [];
@@ -106,6 +85,32 @@ export function BlockGrid({ blocks, allBlocks, loading, onTierChange, selectMode
     }
     return groups;
   }, [sortOrder, blocks]);
+
+  // (columns computed inline via renderGrid)
+
+  if (loading) {
+    return <div className="grid-loading"><div className="loading-spinner" /></div>;
+  }
+
+  if (blocks.length === 0) {
+    return (
+      <div className="grid-empty">
+        <p className="grid-empty-title">No references found</p>
+        <p className="grid-empty-sub">
+          {hasActiveFilters
+            ? 'No blocks match your current filters'
+            : viewingBoardId
+            ? 'This board is empty. Add blocks from the detail view.'
+            : 'Select a channel from the sidebar to explore'}
+        </p>
+        {hasActiveFilters && onClearFilters && (
+          <button className="grid-empty-clear" onClick={onClearFilters}>
+            Clear all filters
+          </button>
+        )}
+      </div>
+    );
+  }
 
   const renderGrid = (items: { block: ArenaBlock; channelTitle: string }[], cols: number) => {
     const gridCols: { block: ArenaBlock; channelTitle: string }[][] = Array.from({ length: cols }, () => []);
@@ -134,9 +139,6 @@ export function BlockGrid({ blocks, allBlocks, loading, onTierChange, selectMode
     ));
   };
 
-  const tierLabels: Record<string, string> = { S: 'S Tier', A: 'A Tier', B: 'B Tier', C: 'C Tier', unrated: 'Unrated' };
-  const tierLabelColors: Record<string, string> = { S: '#e53e3e', A: '#ed8936', B: '#4299e1', C: '#93918c', unrated: 'var(--text-muted)' };
-
   return (
     <>
       {tierGroups ? (
@@ -144,7 +146,7 @@ export function BlockGrid({ blocks, allBlocks, loading, onTierChange, selectMode
           {tierGroups.map(group => (
             <div key={group.tier} className="tier-group">
               <div className="tier-group-header">
-                <span className="tier-group-label" style={{ color: tierLabelColors[group.tier] }}>{tierLabels[group.tier]}</span>
+                <span className="tier-group-label" style={{ color: TIER_LABEL_COLORS[group.tier] }}>{TIER_LABELS[group.tier]}</span>
                 <span className="tier-group-count">{group.items.length}</span>
                 <span className="tier-group-line" />
               </div>
@@ -218,6 +220,7 @@ function InlineMemo({ blockId, onNoteChange, onClose }: { blockId: number; onNot
       <div className="b-memo-actions">
         <button className="b-memo-save" onClick={save}>Save</button>
         <button className="b-memo-cancel" onClick={onClose}>Cancel</button>
+        <span className="b-memo-hint">⌘↵</span>
       </div>
     </div>
   );
@@ -365,13 +368,37 @@ const BlockCard = memo(function BlockCard({
       try { return block.source?.url ? new URL(block.source.url).hostname.replace('www.', '') : null; }
       catch { return null; }
     })();
+    const hasLinkImage = block.image && !imgError;
     return (
-      <div className={`b b-link ${selected ? 'b--selected' : ''}`} onClick={onClick}>
-        {selectCheck}
-        {memoBtn}
-        <span className="b-link-title">{highlight(block.source?.title || block.title || 'Untitled')}</span>
-        {domain && <span className="b-link-domain">{domain}</span>}
-        <div className="b-info b-info--inside">
+      <div className={`b ${hasLinkImage ? '' : 'b-link'} ${selected ? 'b--selected' : ''}`} onClick={onClick}>
+        {hasLinkImage ? (
+          <>
+            <div className="b-img-wrap">
+              <img
+                src={block.image!.display.url}
+                alt=""
+                loading="lazy"
+                onLoad={() => setImgLoaded(true)}
+                onError={() => setImgError(true)}
+                className={`b-img ${imgLoaded ? 'b-img--loaded' : ''}`}
+              />
+              {selectCheck}
+              {memoBtn}
+            </div>
+            <div className="b-link-meta">
+              <span className="b-link-title-sm">{highlight(block.source?.title || block.title || 'Untitled')}</span>
+              {domain && <span className="b-link-domain">{domain}</span>}
+            </div>
+          </>
+        ) : (
+          <>
+            {selectCheck}
+            {memoBtn}
+            <span className="b-link-title">{highlight(block.source?.title || block.title || 'Untitled')}</span>
+            {domain && <span className="b-link-domain">{domain}</span>}
+          </>
+        )}
+        <div className={`b-info ${hasLinkImage ? '' : 'b-info--inside'}`}>
           <span className="b-info-ch"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}{noteIndicator}</span>
           {blockTier && <span className="b-info-tier" style={{ color: TIER_COLORS[blockTier] }}>{blockTier}</span>}
         </div>
@@ -628,6 +655,24 @@ const gridStyles = `
     margin-top: 4px;
     letter-spacing: 0.2px;
   }
+  .b-link-meta {
+    padding: 8px 4px 0;
+  }
+  .b-link-title-sm {
+    display: block;
+    font-size: 11px;
+    line-height: 1.35;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .b-link-meta .b-link-domain {
+    margin-top: 2px;
+    font-size: 9px;
+  }
 
   /* --- Fallback --- */
   .b-fallback {
@@ -739,6 +784,13 @@ const gridStyles = `
     border-radius: 4px;
   }
   .b-memo-cancel:hover { color: var(--text-secondary); }
+  .b-memo-hint {
+    font-size: 9px;
+    color: var(--text-muted);
+    opacity: 0.5;
+    margin-left: auto;
+    user-select: none;
+  }
 
   /* --- Tier groups --- */
   .tier-group {

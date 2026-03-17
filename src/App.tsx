@@ -139,6 +139,7 @@ function App() {
     setSelectedChannel(slug);
     setViewingBoard(null);
     if (slug) loadChannel(slug);
+    window.scrollTo({ top: 0 });
   }, [loadChannel]);
 
   // Auto-refresh selected channel every 2 minutes
@@ -247,6 +248,7 @@ function App() {
     if (id) {
       setSelectedChannel(null);
     }
+    window.scrollTo({ top: 0 });
   }, []);
 
   // All blocks, deduplicated
@@ -267,12 +269,14 @@ function App() {
   const blocks = useMemo(() => {
     let source = allBlocks;
 
-    // If viewing a board, filter to board blocks
+    // If viewing a board, filter to board blocks and preserve board order
     if (viewingBoard) {
       const board = boards.find(b => b.id === viewingBoard);
       if (board) {
-        const idSet = new Set(board.blockIds);
-        source = allBlocks.filter(item => idSet.has(item.block.id));
+        const blockMap = new Map(allBlocks.map(item => [item.block.id, item]));
+        source = board.blockIds
+          .map(id => blockMap.get(id))
+          .filter((item): item is { block: ArenaBlock; channelTitle: string } => !!item);
       }
     } else if (selectedChannel) {
       const data = channelData.get(selectedChannel);
@@ -372,6 +376,19 @@ function App() {
     }
     setShowAddBlock(false);
   }, [selectedChannel, loadChannel]);
+
+  // Global keyboard shortcut: "/" to focus search
+  useEffect(() => {
+    const handleGlobalKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === '/') {
+        e.preventDefault();
+        document.getElementById('header-search-input')?.focus();
+      }
+    };
+    document.addEventListener('keydown', handleGlobalKey);
+    return () => document.removeEventListener('keydown', handleGlobalKey);
+  }, []);
 
   if (error) {
     return (

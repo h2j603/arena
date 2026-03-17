@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface Props {
   searchQuery: string;
@@ -91,6 +91,12 @@ export function Header({
   const [showNameInput, setShowNameInput] = useState(false);
   const [editingDesc, setEditingDesc] = useState(false);
   const [descText, setDescText] = useState(boardDescription || '');
+
+  // Sync description text when switching boards
+  useEffect(() => {
+    setDescText(boardDescription || '');
+    setEditingDesc(false);
+  }, [viewingBoardId, boardDescription]);
 
   const handleCreateBoard = () => {
     if (!showNameInput) {
@@ -217,10 +223,18 @@ export function Header({
                 <input
                   type="text"
                   className="header-search"
-                  placeholder="Search..."
+                  placeholder="Search ( / )"
                   value={searchQuery}
                   onChange={(e) => onSearchChange(e.target.value)}
+                  id="header-search-input"
                 />
+                {searchQuery && (
+                  <button className="search-clear" onClick={() => onSearchChange('')} title="Clear search">
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                      <path d="M2.5 2.5l5 5M7.5 2.5l-5 5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                    </svg>
+                  </button>
+                )}
               </div>
             </>
           )}
@@ -428,7 +442,18 @@ const headerStyles = `
     width: 150px;
     transition: all var(--transition);
   }
-  .header-search::placeholder { color: var(--text-muted); }
+  .header-search::placeholder { color: var(--text-muted); font-size: 11px; }
+  .search-clear {
+    position: absolute;
+    right: 6px;
+    display: flex;
+    align-items: center;
+    padding: 2px;
+    color: var(--text-muted);
+    border-radius: 50%;
+    transition: color var(--transition-fast);
+  }
+  .search-clear:hover { color: var(--text); }
   .header-search:focus {
     border-color: var(--text-muted);
     width: 200px;
@@ -486,6 +511,7 @@ const headerStyles = `
     .header-search:focus { width: 120px; }
     .search-icon { left: 6px; }
     .header-btn { font-size: 10px; padding: 4px 8px; gap: 3px; }
+    .search-clear { padding: 6px; }
     .board-name-input { width: 100px; font-size: 10px; }
 
     .header-types-strip {

@@ -51,13 +51,20 @@ export function BlockDetail({ block, channelTitle, allBlocks, blocks, onClose, o
       if (e.key === 'ArrowLeft') { e.preventDefault(); goPrev(); }
       if (e.key === 'ArrowRight') { e.preventDefault(); goNext(); }
     };
+    const handleClick = (e: MouseEvent) => {
+      if (showBoardPicker && !(e.target as HTMLElement).closest('.detail-board-add-wrap')) {
+        setShowBoardPicker(false);
+      }
+    };
     document.addEventListener('keydown', handleKey);
+    document.addEventListener('mousedown', handleClick);
     document.body.style.overflow = 'hidden';
     return () => {
       document.removeEventListener('keydown', handleKey);
+      document.removeEventListener('mousedown', handleClick);
       document.body.style.overflow = '';
     };
-  }, [onClose, currentIndex, navList]);
+  }, [onClose, currentIndex, navList, showBoardPicker]);
 
   useEffect(() => {
     setCurrentTier(getTier(block.id));
@@ -100,6 +107,9 @@ export function BlockDetail({ block, channelTitle, allBlocks, blocks, onClose, o
           <button className="detail-nav-btn" onClick={goPrev} disabled={!hasPrev} title="Previous (←)">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M8.5 3.5l-4 3.5 4 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </button>
+          {currentIndex >= 0 && (
+            <span className="detail-nav-counter">{currentIndex + 1} / {navList.length}</span>
+          )}
           <button className="detail-nav-btn" onClick={goNext} disabled={!hasNext} title="Next (→)">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5.5 3.5l4 3.5-4 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </button>
@@ -323,6 +333,17 @@ export function BlockDetail({ block, channelTitle, allBlocks, blocks, onClose, o
                         alt=""
                         className="detail-related-img"
                         loading="lazy"
+                        onError={(e) => {
+                          const img = e.target as HTMLImageElement;
+                          img.style.display = 'none';
+                          const wrapper = img.parentElement;
+                          if (wrapper) {
+                            const ph = document.createElement('div');
+                            ph.className = 'detail-related-placeholder';
+                            ph.innerHTML = `<span class="detail-related-placeholder-type">${item.block.class}</span><span class="detail-related-placeholder-title">${(item.block.title || 'Untitled').slice(0, 60)}</span>`;
+                            wrapper.insertBefore(ph, img);
+                          }
+                        }}
                       />
                     ) : (
                       <div className="detail-related-placeholder">
@@ -412,6 +433,14 @@ const detailStyles = `
   .detail-nav-btn:disabled {
     opacity: 0.25;
     cursor: default;
+  }
+  .detail-nav-counter {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.3px;
+    padding: 0 2px;
+    user-select: none;
   }
   .detail-close {
     padding: 6px;
@@ -860,6 +889,10 @@ const detailStyles = `
       padding: 0;
     }
     .detail-nav-btn:hover:not(:disabled) { color: #fff; }
+    .detail-nav-counter {
+      color: rgba(255,255,255,0.7);
+      text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
     .detail-close {
       background: rgba(0,0,0,0.5);
       color: #fff;
