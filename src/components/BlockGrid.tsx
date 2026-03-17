@@ -20,11 +20,25 @@ interface Props {
   onNoteChange: () => void;
   tierVersion: number;
   columnCount: number;
+  searchQuery?: string;
+  sortOrder?: string;
+  viewingBoardId?: string | null;
+  onMoveBlockInBoard?: (boardId: string, blockId: number, direction: 'up' | 'down') => void;
+  onClearFilters?: () => void;
+  hasActiveFilters?: boolean;
 }
 
-export function BlockGrid({ blocks, allBlocks, loading, onTierChange, selectMode, selectedIds, onToggleSelect, boards, onAddToBoard, noteVersion, onNoteChange, tierVersion, columnCount }: Props) {
+export function BlockGrid({ blocks, allBlocks, loading, onTierChange, selectMode, selectedIds, onToggleSelect, boards, onAddToBoard, noteVersion, onNoteChange, tierVersion, columnCount, searchQuery, sortOrder, viewingBoardId, onMoveBlockInBoard, onClearFilters, hasActiveFilters }: Props) {
   const [selectedBlock, setSelectedBlock] = useState<{ block: ArenaBlock; channelTitle: string } | null>(null);
   const [memoBlockId, setMemoBlockId] = useState<number | null>(null);
+
+  // Close memo if the block is no longer visible (e.g. filter changed)
+  useEffect(() => {
+    if (memoBlockId !== null && !blocks.some(b => b.block.id === memoBlockId)) {
+      setMemoBlockId(null);
+    }
+  }, [blocks, memoBlockId]);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const [computedCols, setComputedCols] = useState(2);
 
@@ -51,14 +65,7 @@ export function BlockGrid({ blocks, allBlocks, loading, onTierChange, selectMode
     return () => ro.disconnect();
   }, [updateCols]);
 
-  // Distribute items across columns in row-first (round-robin) order
-  const columns = useMemo(() => {
-    const cols: { block: ArenaBlock; channelTitle: string }[][] = Array.from({ length: computedCols }, () => []);
-    blocks.forEach((item, i) => {
-      cols[i % computedCols].push(item);
-    });
-    return cols;
-  }, [blocks, computedCols]);
+  // (columns computed inline via renderGrid)
 
   if (loading) {
     return <div className="grid-loading"><div className="loading-spinner" /></div>;
@@ -68,46 +75,105 @@ export function BlockGrid({ blocks, allBlocks, loading, onTierChange, selectMode
     return (
       <div className="grid-empty">
         <p className="grid-empty-title">No references found</p>
-        <p className="grid-empty-sub">Select a channel from the sidebar to explore</p>
+        <p className="grid-empty-sub">
+          {hasActiveFilters
+            ? 'No blocks match your current filters'
+            : 'Select a channel from the sidebar to explore'}
+        </p>
+        {hasActiveFilters && onClearFilters && (
+          <button className="grid-empty-clear" onClick={onClearFilters}>
+            Clear all filters
+          </button>
+        )}
       </div>
     );
   }
 
-  return (
-    <>
-      <div className="block-grid" ref={containerRef}>
-        {columns.map((col, colIdx) => (
-          <div className="block-grid-col" key={colIdx}>
-            {col.map((item) => (
-              <BlockCard
-                key={`${item.block.id}-${item.channelTitle}`}
-                block={item.block}
-                channelTitle={item.channelTitle}
-                onClick={() => selectMode ? onToggleSelect(item.block.id) : setSelectedBlock(item)}
-                selected={selectMode && selectedIds.has(item.block.id)}
-                selectMode={selectMode}
-                noteVersion={noteVersion}
-                tierVersion={tierVersion}
-                memoOpen={memoBlockId === item.block.id}
-                onMemoToggle={(id) => setMemoBlockId(prev => prev === id ? null : id)}
-                onNoteChange={onNoteChange}
-              />
-            ))}
-          </div>
+  // Tier grouping when sorted by tier
+  const tierGroups = useMemo(() => {
+    if (sortOrder !== 'tier') return null;
+    const groups: { tier: string; items: { block: ArenaBlock; channelTitle: string }[] }[] = [];
+    const tierOrder = ['S', 'A', 'B', 'C', 'unrated'];
+    const grouped = new Map<string, { block: ArenaBlock; channelTitle: string }[]>();
+    for (const t of tierOrder) grouped.set(t, []);
+    for (const item of blocks) {
+      const t = getTier(item.block.id) || 'unrated';
+      grouped.get(t)!.push(item);
+    }
+    for (const t of tierOrder) {
+      const items = grouped.get(t)!;
+      if (items.length > 0) groups.push({ tier: t, items });
+    }
+    return groups;
+  }, [sortOrder, blocks]);
+
+  const renderGrid = (items: { block: ArenaBlock; channelTitle: string }[], cols: number) => {
+    const gridCols: { block: ArenaBlock; channelTitle: string }[][] = Array.from({ length: cols }, () => []);
+    items.forEach((item, i) => {
+      gridCols[i % cols].push(item);
+    });
+    return gridCols.map((col, colIdx) => (
+      <div className="block-grid-col" key={colIdx}>
+        {col.map((item) => (
+          <BlockCard
+            key={`${item.block.id}-${item.channelTitle}`}
+            block={item.block}
+            channelTitle={item.channelTitle}
+            onClick={() => selectMode ? onToggleSelect(item.block.id) : setSelectedBlock(item)}
+            selected={selectMode && selectedIds.has(item.block.id)}
+            selectMode={selectMode}
+            noteVersion={noteVersion}
+            tierVersion={tierVersion}
+            memoOpen={memoBlockId === item.block.id}
+            onMemoToggle={(id) => setMemoBlockId(prev => prev === id ? null : id)}
+            onNoteChange={onNoteChange}
+            searchQuery={searchQuery}
+          />
         ))}
       </div>
+    ));
+  };
+
+  const tierLabels: Record<string, string> = { S: 'S Tier', A: 'A Tier', B: 'B Tier', C: 'C Tier', unrated: 'Unrated' };
+  const tierLabelColors: Record<string, string> = { S: '#e53e3e', A: '#ed8936', B: '#4299e1', C: '#93918c', unrated: 'var(--text-muted)' };
+
+  return (
+    <>
+      {tierGroups ? (
+        <div ref={containerRef}>
+          {tierGroups.map(group => (
+            <div key={group.tier} className="tier-group">
+              <div className="tier-group-header">
+                <span className="tier-group-label" style={{ color: tierLabelColors[group.tier] }}>{tierLabels[group.tier]}</span>
+                <span className="tier-group-count">{group.items.length}</span>
+                <span className="tier-group-line" />
+              </div>
+              <div className="block-grid">
+                {renderGrid(group.items, computedCols)}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="block-grid" ref={containerRef}>
+          {renderGrid(blocks, computedCols)}
+        </div>
+      )}
 
       {selectedBlock && (
         <BlockDetail
           block={selectedBlock.block}
           channelTitle={selectedBlock.channelTitle}
           allBlocks={allBlocks}
+          blocks={blocks}
           onClose={() => setSelectedBlock(null)}
           onSelectBlock={(item) => setSelectedBlock(item)}
           onTierChange={onTierChange}
           onNoteChange={onNoteChange}
           boards={boards}
           onAddToBoard={onAddToBoard}
+          viewingBoardId={viewingBoardId}
+          onMoveBlockInBoard={onMoveBlockInBoard}
         />
       )}
       <style>{gridStyles}</style>
@@ -168,6 +234,7 @@ const BlockCard = memo(function BlockCard({
   memoOpen,
   onMemoToggle,
   onNoteChange,
+  searchQuery,
 }: {
   block: ArenaBlock;
   channelTitle: string;
@@ -179,8 +246,10 @@ const BlockCard = memo(function BlockCard({
   memoOpen?: boolean;
   onMemoToggle?: (id: number) => void;
   onNoteChange?: () => void;
+  searchQuery?: string;
 }) {
   const [imgLoaded, setImgLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const content = block.content || '';
   const isShortText = block.class === 'Text' && content.length < 140;
   const chColor = getChannelColor(channelTitle);
@@ -212,8 +281,24 @@ const BlockCard = memo(function BlockCard({
     <InlineMemo blockId={block.id} onNoteChange={onNoteChange} onClose={() => onMemoToggle?.(block.id)} />
   ) : null;
 
+  const highlight = (text: string) => {
+    if (!searchQuery || !text) return text;
+    const q = searchQuery.toLowerCase();
+    const idx = text.toLowerCase().indexOf(q);
+    if (idx === -1) return text;
+    return <>{text.slice(0, idx)}<mark className="b-highlight">{text.slice(idx, idx + q.length)}</mark>{text.slice(idx + q.length)}</>;
+  };
+
+  const noteIndicator = blockHasNote && (
+    <span className="b-note-inline" title="Has memo">
+      <svg width="6" height="6" viewBox="0 0 6 6" fill="none">
+        <circle cx="3" cy="3" r="3" fill="var(--accent)"/>
+      </svg>
+    </span>
+  );
+
   // Image block
-  if (block.image) {
+  if (block.image && !imgError) {
     return (
       <div className={`b ${selected ? 'b--selected' : ''}`} onClick={onClick}>
         <div className="b-img-wrap">
@@ -222,13 +307,34 @@ const BlockCard = memo(function BlockCard({
             alt=""
             loading="lazy"
             onLoad={() => setImgLoaded(true)}
+            onError={() => setImgError(true)}
             className={`b-img ${imgLoaded ? 'b-img--loaded' : ''}`}
           />
           {selectCheck}
           {memoBtn}
         </div>
         <div className="b-info">
-          <span className="b-info-ch"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}{blockHasNote && <span className="b-note-inline" />}</span>
+          <span className="b-info-ch"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}{noteIndicator}</span>
+          {blockTier && <span className="b-info-tier" style={{ color: TIER_COLORS[blockTier] }}>{blockTier}</span>}
+        </div>
+        {memoPopup}
+      </div>
+    );
+  }
+
+  // Image fallback (show as text-like card)
+  if (block.image && imgError) {
+    return (
+      <div className={`b b-fallback ${selected ? 'b--selected' : ''}`} onClick={onClick}>
+        {selectCheck}
+        {memoBtn}
+        <span className="b-fallback-type">Image</span>
+        <span className="b-fallback-title">{highlight((block.title || 'Untitled').slice(0, 80))}</span>
+        <div className="b-img-broken">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 3h14v14H3V3z" stroke="currentColor" strokeWidth="1.2"/><path d="M3 14l4-4 3 3 2-2 5 5" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/><circle cx="13" cy="7" r="1.5" stroke="currentColor" strokeWidth="1.2"/></svg>
+        </div>
+        <div className="b-info b-info--inside">
+          <span className="b-info-ch"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}{noteIndicator}</span>
           {blockTier && <span className="b-info-tier" style={{ color: TIER_COLORS[blockTier] }}>{blockTier}</span>}
         </div>
         {memoPopup}
@@ -242,10 +348,10 @@ const BlockCard = memo(function BlockCard({
       <div className={`b b-text ${isShortText ? 'b-text--short' : 'b-text--long'} ${selected ? 'b--selected' : ''}`} onClick={onClick}>
         {selectCheck}
         {memoBtn}
-        <p className="b-text-content">{content.slice(0, isShortText ? 140 : 360)}</p>
+        <p className="b-text-content">{highlight(content.slice(0, isShortText ? 140 : 360))}</p>
         {!isShortText && <div className="b-text-fade" />}
         <div className="b-info b-info--inside">
-          <span className="b-info-ch"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}{blockHasNote && <span className="b-note-inline" />}</span>
+          <span className="b-info-ch"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}{noteIndicator}</span>
           {blockTier && <span className="b-info-tier" style={{ color: TIER_COLORS[blockTier] }}>{blockTier}</span>}
         </div>
         {memoPopup}
@@ -263,10 +369,10 @@ const BlockCard = memo(function BlockCard({
       <div className={`b b-link ${selected ? 'b--selected' : ''}`} onClick={onClick}>
         {selectCheck}
         {memoBtn}
-        <span className="b-link-title">{block.source?.title || block.title || 'Untitled'}</span>
+        <span className="b-link-title">{highlight(block.source?.title || block.title || 'Untitled')}</span>
         {domain && <span className="b-link-domain">{domain}</span>}
         <div className="b-info b-info--inside">
-          <span className="b-info-ch"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}{blockHasNote && <span className="b-note-inline" />}</span>
+          <span className="b-info-ch"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}{noteIndicator}</span>
           {blockTier && <span className="b-info-tier" style={{ color: TIER_COLORS[blockTier] }}>{blockTier}</span>}
         </div>
         {memoPopup}
@@ -280,9 +386,9 @@ const BlockCard = memo(function BlockCard({
       {selectCheck}
       {memoBtn}
       <span className="b-fallback-type">{block.class}</span>
-      {block.title && <span className="b-fallback-title">{block.title}</span>}
+      {block.title && <span className="b-fallback-title">{highlight(block.title)}</span>}
       <div className="b-info b-info--inside">
-        <span className="b-info-ch"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}{blockHasNote && <span className="b-note-inline" />}</span>
+        <span className="b-info-ch"><span className="b-ch-dot" style={{ background: chColor }} />{channelTitle}{noteIndicator}</span>
         {blockTier && <span className="b-info-tier" style={{ color: TIER_COLORS[blockTier] }}>{blockTier}</span>}
       </div>
       {memoPopup}
@@ -319,6 +425,19 @@ const gridStyles = `
     letter-spacing: -0.3px;
   }
   .grid-empty-sub { font-size: 12px; }
+  .grid-empty-clear {
+    margin-top: 12px;
+    padding: 6px 18px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    transition: all var(--transition-fast);
+  }
+  .grid-empty-clear:hover {
+    border-color: var(--text-muted);
+    color: var(--text);
+  }
 
   /* --- Block (base) --- */
   .b {
@@ -414,14 +533,25 @@ const gridStyles = `
     flex-shrink: 0;
   }
   .b-note-inline {
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: var(--text-muted);
-    display: inline-block;
-    margin-left: 5px;
+    display: inline-flex;
+    align-items: center;
+    margin-left: 4px;
     vertical-align: middle;
-    opacity: 0.7;
+    opacity: 0.8;
+  }
+  .b-highlight {
+    background: rgba(237, 137, 54, 0.25);
+    color: inherit;
+    border-radius: 2px;
+    padding: 0 1px;
+  }
+  .b-img-broken {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    color: var(--text-muted);
+    opacity: 0.4;
   }
 
   /* Info row inside text/link/fallback blocks */
@@ -609,6 +739,34 @@ const gridStyles = `
     border-radius: 4px;
   }
   .b-memo-cancel:hover { color: var(--text-secondary); }
+
+  /* --- Tier groups --- */
+  .tier-group {
+    margin-bottom: 8px;
+  }
+  .tier-group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 28px 4px;
+  }
+  .tier-group-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .tier-group-count {
+    font-size: 10px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+  .tier-group-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border-light);
+  }
 
   /* --- Responsive --- */
   @media (max-width: 480px) {

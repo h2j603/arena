@@ -5,6 +5,7 @@ const STORAGE_KEY = 'arena_boards';
 export interface Board {
   id: string;
   name: string;
+  description?: string;
   blockIds: number[];
   createdAt: string;
 }
@@ -71,4 +72,27 @@ export function removeFromBoard(boardId: string, blockId: number) {
     cache = boards;
     save();
   }
+}
+
+export function updateBoardDescription(boardId: string, description: string) {
+  const boards = load();
+  const board = boards.find(b => b.id === boardId);
+  if (board) {
+    board.description = description;
+    cache = boards;
+    save();
+  }
+}
+
+export function moveBlockInBoard(boardId: string, blockId: number, direction: 'up' | 'down') {
+  const boards = load();
+  const board = boards.find(b => b.id === boardId);
+  if (!board) return;
+  const idx = board.blockIds.indexOf(blockId);
+  if (idx === -1) return;
+  const newIdx = direction === 'up' ? idx - 1 : idx + 1;
+  if (newIdx < 0 || newIdx >= board.blockIds.length) return;
+  [board.blockIds[idx], board.blockIds[newIdx]] = [board.blockIds[newIdx], board.blockIds[idx]];
+  cache = boards;
+  save();
 }

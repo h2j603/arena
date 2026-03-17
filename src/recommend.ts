@@ -44,15 +44,21 @@ Pick the 6 most visually/thematically related references from the list above.
 Return ONLY valid JSON:
 {"relatedIds":[id1,id2,...]}`;
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+
   const response = await fetch('/api/categorize', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    signal: controller.signal,
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 512,
       messages: [{ role: 'user', content: prompt }],
     }),
   });
+
+  clearTimeout(timeout);
 
   if (!response.ok) throw new Error(`API ${response.status}`);
 

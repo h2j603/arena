@@ -3,7 +3,7 @@ import html2canvas from 'html2canvas';
 import { getSlug, getUserChannels, getChannelContents } from './api';
 import type { ArenaChannel, ArenaBlock } from './types';
 import { getTier } from './tiers';
-import { getBoards, createBoard, deleteBoard, addToBoard, type Board } from './boards';
+import { getBoards, createBoard, deleteBoard, addToBoard, updateBoardDescription, moveBlockInBoard, type Board } from './boards';
 import { pullFromCloud, pushToCloud } from './sync';
 import { Sidebar } from './components/Sidebar';
 import { BlockGrid } from './components/BlockGrid';
@@ -53,6 +53,20 @@ function App() {
 
   // Add block modal
   const [showAddBlock, setShowAddBlock] = useState(false);
+
+  // Theme: 'auto' | 'light' | 'dark'
+  const [theme, setTheme] = useState<string>(() => {
+    return localStorage.getItem('arena_theme') || 'auto';
+  });
+
+  useEffect(() => {
+    if (theme === 'auto') {
+      document.documentElement.removeAttribute('data-theme');
+    } else {
+      document.documentElement.setAttribute('data-theme', theme);
+    }
+    localStorage.setItem('arena_theme', theme);
+  }, [theme]);
 
   // Column count (0 = auto)
   const [columnCount, setColumnCount] = useState<number>(() => {
@@ -178,10 +192,28 @@ function App() {
   }, [selectedIds]);
 
   const handleDeleteBoard = useCallback((id: string) => {
+    if (!window.confirm('Delete this board? This cannot be undone.')) return;
     deleteBoard(id);
     setBoards(getBoards());
     if (viewingBoard === id) setViewingBoard(null);
   }, [viewingBoard]);
+
+  const handleUpdateBoardDescription = useCallback((id: string, desc: string) => {
+    updateBoardDescription(id, desc);
+    setBoards(getBoards());
+  }, []);
+
+  const handleMoveBlockInBoard = useCallback((boardId: string, blockId: number, direction: 'up' | 'down') => {
+    moveBlockInBoard(boardId, blockId, direction);
+    setBoards(getBoards());
+  }, []);
+
+  const handleClearFilters = useCallback(() => {
+    setSearchQuery('');
+    setBlockTypeFilter('all');
+    setTierFilter('all');
+    setSortOrder('newest');
+  }, []);
 
   const handleExportBoard = useCallback(async () => {
     const grid = document.querySelector('.block-grid') as HTMLElement | null;
@@ -373,6 +405,8 @@ function App() {
         viewingBoard={viewingBoard}
         onViewBoard={handleViewBoard}
         onDeleteBoard={handleDeleteBoard}
+        theme={theme}
+        onThemeChange={setTheme}
       />
       <main className="main-content">
         <Header
@@ -393,6 +427,9 @@ function App() {
           onShowAddBlock={() => setShowAddBlock(true)}
           hasSelectedChannel={!!selectedChannel}
           viewingBoard={!!viewingBoard}
+          viewingBoardId={viewingBoard}
+          boardDescription={viewingBoard ? boards.find(b => b.id === viewingBoard)?.description : undefined}
+          onUpdateBoardDescription={handleUpdateBoardDescription}
           onExportBoard={handleExportBoard}
           onRefresh={handleRefresh}
           columnCount={columnCount}
@@ -412,6 +449,12 @@ function App() {
           onNoteChange={() => setNoteVersion(v => v + 1)}
           tierVersion={tierVersion}
           columnCount={columnCount}
+          searchQuery={searchQuery}
+          sortOrder={sortOrder}
+          viewingBoardId={viewingBoard}
+          onMoveBlockInBoard={handleMoveBlockInBoard}
+          onClearFilters={handleClearFilters}
+          hasActiveFilters={searchQuery !== '' || blockTypeFilter !== 'all' || tierFilter !== 'all'}
         />
       </main>
 

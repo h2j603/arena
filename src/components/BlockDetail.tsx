@@ -15,15 +15,18 @@ interface Props {
   block: ArenaBlock;
   channelTitle: string;
   allBlocks: BlockItem[];
+  blocks?: BlockItem[];
   onClose: () => void;
   onSelectBlock: (item: BlockItem) => void;
   onTierChange?: () => void;
   onNoteChange?: () => void;
   boards?: Board[];
   onAddToBoard?: (boardId: string, blockId: number) => void;
+  viewingBoardId?: string | null;
+  onMoveBlockInBoard?: (boardId: string, blockId: number, direction: 'up' | 'down') => void;
 }
 
-export function BlockDetail({ block, channelTitle, allBlocks, onClose, onSelectBlock, onTierChange, onNoteChange, boards, onAddToBoard }: Props) {
+export function BlockDetail({ block, channelTitle, allBlocks, blocks, onClose, onSelectBlock, onTierChange, onNoteChange, boards, onAddToBoard, viewingBoardId, onMoveBlockInBoard }: Props) {
   const [related, setRelated] = useState<BlockItem[]>([]);
   const [loadingRelated, setLoadingRelated] = useState(false);
   const [currentTier, setCurrentTier] = useState<Tier | null>(() => getTier(block.id));
@@ -32,17 +35,29 @@ export function BlockDetail({ block, channelTitle, allBlocks, onClose, onSelectB
   const [noteText, setNoteText] = useState(() => getNote(block.id));
   const [noteEditing, setNoteEditing] = useState(false);
 
+  // Current block index in the filtered list for prev/next navigation
+  const navList = blocks || allBlocks;
+  const currentIndex = navList.findIndex(item => item.block.id === block.id);
+  const hasPrev = currentIndex > 0;
+  const hasNext = currentIndex >= 0 && currentIndex < navList.length - 1;
+  const goPrev = () => { if (hasPrev) onSelectBlock(navList[currentIndex - 1]); };
+  const goNext = () => { if (hasNext) onSelectBlock(navList[currentIndex + 1]); };
+
   useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
+    const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
+      // Don't navigate when typing in a textarea/input
+      if (e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement) return;
+      if (e.key === 'ArrowLeft') { e.preventDefault(); goPrev(); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); goNext(); }
     };
-    document.addEventListener('keydown', handleEsc);
+    document.addEventListener('keydown', handleKey);
     document.body.style.overflow = 'hidden';
     return () => {
-      document.removeEventListener('keydown', handleEsc);
+      document.removeEventListener('keydown', handleKey);
       document.body.style.overflow = '';
     };
-  }, [onClose]);
+  }, [onClose, currentIndex, navList]);
 
   useEffect(() => {
     setCurrentTier(getTier(block.id));
@@ -81,11 +96,19 @@ export function BlockDetail({ block, channelTitle, allBlocks, onClose, onSelectB
   return (
     <div className="detail-overlay" onClick={onClose}>
       <div className="detail-panel" onClick={(e) => e.stopPropagation()}>
-        <button className="detail-close" onClick={onClose}>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M4.5 4.5l7 7M11.5 4.5l-7 7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-          </svg>
-        </button>
+        <div className="detail-nav-bar">
+          <button className="detail-nav-btn" onClick={goPrev} disabled={!hasPrev} title="Previous (←)">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M8.5 3.5l-4 3.5 4 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </button>
+          <button className="detail-nav-btn" onClick={goNext} disabled={!hasNext} title="Next (→)">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5.5 3.5l4 3.5-4 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </button>
+          <button className="detail-close" onClick={onClose}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M4.5 4.5l7 7M11.5 4.5l-7 7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+            </svg>
+          </button>
+        </div>
 
         <div className="detail-body">
           {block.image && (
@@ -218,6 +241,24 @@ export function BlockDetail({ block, channelTitle, allBlocks, onClose, onSelectB
                   Visit Source
                 </a>
               )}
+              {viewingBoardId && onMoveBlockInBoard && (
+                <div className="detail-reorder-wrap">
+                  <button
+                    className="detail-action detail-action--secondary"
+                    onClick={() => onMoveBlockInBoard(viewingBoardId, block.id, 'up')}
+                    title="Move up in board"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 2v8M3 5l3-3 3 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </button>
+                  <button
+                    className="detail-action detail-action--secondary"
+                    onClick={() => onMoveBlockInBoard(viewingBoardId, block.id, 'down')}
+                    title="Move down in board"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 10V2M3 7l3 3 3-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </button>
+                </div>
+              )}
               {boards && boards.length > 0 && onAddToBoard && (
                 <div className="detail-board-add-wrap">
                   <button
@@ -345,11 +386,34 @@ const detailStyles = `
     from { opacity: 0; transform: translateY(12px); }
     to { opacity: 1; transform: translateY(0); }
   }
-  .detail-close {
+  .detail-nav-bar {
     position: absolute;
     top: 12px;
     right: 12px;
     z-index: 10;
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+  .detail-nav-btn {
+    padding: 6px;
+    border-radius: 50%;
+    color: var(--text-secondary);
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+  }
+  .detail-nav-btn:hover:not(:disabled) {
+    color: var(--text);
+    border-color: var(--border);
+  }
+  .detail-nav-btn:disabled {
+    opacity: 0.25;
+    cursor: default;
+  }
+  .detail-close {
     padding: 6px;
     border-radius: 50%;
     color: var(--text-secondary);
@@ -631,6 +695,10 @@ const detailStyles = `
     color: var(--text);
     opacity: 1;
   }
+  .detail-reorder-wrap {
+    display: flex;
+    gap: 4px;
+  }
   .detail-board-add-wrap {
     position: relative;
   }
@@ -776,14 +844,27 @@ const detailStyles = `
       from { transform: translateY(100%); }
       to { transform: translateY(0); }
     }
-    .detail-close {
+    .detail-nav-bar {
       top: 10px;
       right: 10px;
+      z-index: 20;
+    }
+    .detail-nav-btn {
       background: rgba(0,0,0,0.5);
       color: #fff;
       border: none;
       box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-      z-index: 20;
+      width: 32px;
+      height: 32px;
+      justify-content: center;
+      padding: 0;
+    }
+    .detail-nav-btn:hover:not(:disabled) { color: #fff; }
+    .detail-close {
+      background: rgba(0,0,0,0.5);
+      color: #fff;
+      border: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
       width: 32px;
       height: 32px;
       display: flex;

@@ -18,6 +18,9 @@ interface Props {
   onShowAddBlock: () => void;
   hasSelectedChannel: boolean;
   viewingBoard?: boolean;
+  viewingBoardId?: string | null;
+  boardDescription?: string;
+  onUpdateBoardDescription?: (id: string, desc: string) => void;
   onExportBoard?: () => void;
   onRefresh?: () => void;
   columnCount: number;
@@ -80,9 +83,14 @@ export function Header({
   onRefresh,
   columnCount,
   onColumnCountChange,
+  viewingBoardId,
+  boardDescription,
+  onUpdateBoardDescription,
 }: Props) {
   const [boardName, setBoardName] = useState('');
   const [showNameInput, setShowNameInput] = useState(false);
+  const [editingDesc, setEditingDesc] = useState(false);
+  const [descText, setDescText] = useState(boardDescription || '');
 
   const handleCreateBoard = () => {
     if (!showNameInput) {
@@ -99,10 +107,46 @@ export function Header({
     <header className="header">
       <div className="header-bar">
         <div className="header-identity">
-          <h2 className="header-title">
-            {selectedChannelTitle || 'All References'}
-          </h2>
-          <span className="header-count">{totalBlocks}</span>
+          <div className="header-title-wrap">
+            <h2 className="header-title">
+              {selectedChannelTitle || 'All References'}
+            </h2>
+            <span className="header-count">{totalBlocks}</span>
+          </div>
+          {viewingBoard && viewingBoardId && (
+            <div className="header-board-desc">
+              {editingDesc ? (
+                <input
+                  className="header-board-desc-input"
+                  value={descText}
+                  onChange={e => setDescText(e.target.value)}
+                  placeholder="Add a description..."
+                  autoFocus
+                  onBlur={() => {
+                    onUpdateBoardDescription?.(viewingBoardId, descText);
+                    setEditingDesc(false);
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      onUpdateBoardDescription?.(viewingBoardId, descText);
+                      setEditingDesc(false);
+                    }
+                    if (e.key === 'Escape') {
+                      setDescText(boardDescription || '');
+                      setEditingDesc(false);
+                    }
+                  }}
+                />
+              ) : (
+                <span
+                  className="header-board-desc-text"
+                  onClick={() => { setDescText(boardDescription || ''); setEditingDesc(true); }}
+                >
+                  {boardDescription || 'Add a description...'}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="header-actions">
@@ -252,10 +296,36 @@ const headerStyles = `
   }
   .header-identity {
     display: flex;
-    align-items: baseline;
-    gap: 8px;
+    flex-direction: column;
     min-width: 0;
     flex: 1;
+    gap: 0;
+  }
+  .header-title-wrap {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .header-board-desc {
+    margin-top: -2px;
+  }
+  .header-board-desc-text {
+    font-size: 11px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color var(--transition-fast);
+  }
+  .header-board-desc-text:hover { color: var(--text-secondary); }
+  .header-board-desc-input {
+    font-size: 11px;
+    font-family: inherit;
+    color: var(--text);
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    outline: none;
+    padding: 0 0 2px;
+    width: 240px;
   }
   .header-title {
     font-family: var(--font-display);

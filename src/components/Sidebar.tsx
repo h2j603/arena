@@ -16,9 +16,11 @@ interface Props {
   viewingBoard: string | null;
   onViewBoard: (id: string | null) => void;
   onDeleteBoard: (id: string) => void;
+  theme: string;
+  onThemeChange: (t: string) => void;
 }
 
-export function Sidebar({ channels, selectedChannel, onSelectChannel, username, loadedChannels: _loadedChannels, hiddenChannels, onToggleHidden, boards, viewingBoard, onViewBoard, onDeleteBoard }: Props) {
+export function Sidebar({ channels, selectedChannel, onSelectChannel, username, loadedChannels: _loadedChannels, hiddenChannels, onToggleHidden, boards, viewingBoard, onViewBoard, onDeleteBoard, theme, onThemeChange }: Props) {
   const [search, setSearch] = useState('');
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -161,9 +163,29 @@ export function Sidebar({ channels, selectedChannel, onSelectChannel, username, 
       </nav>
 
       <div className="sidebar-footer">
-        <button className="sidebar-disconnect" onClick={() => { clearToken(); window.location.reload(); }}>
-          Disconnect
-        </button>
+        <div className="sidebar-footer-row">
+          <button className="sidebar-disconnect" onClick={() => { clearToken(); window.location.reload(); }}>
+            Disconnect
+          </button>
+          <div className="theme-toggle">
+            {(['auto', 'light', 'dark'] as const).map(t => (
+              <button
+                key={t}
+                className={`theme-btn ${theme === t ? 'theme-btn--active' : ''}`}
+                onClick={() => onThemeChange(t)}
+                title={t === 'auto' ? 'System' : t === 'light' ? 'Light' : 'Dark'}
+              >
+                {t === 'auto' ? (
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="4" stroke="currentColor" strokeWidth="1.1"/><path d="M5.5 1.5v8" stroke="currentColor" strokeWidth="1.1"/><path d="M5.5 1.5A4 4 0 005.5 9.5" fill="currentColor"/></svg>
+                ) : t === 'light' ? (
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="2.5" stroke="currentColor" strokeWidth="1.1"/><path d="M5.5 1v1M5.5 9v1M1 5.5h1M9 5.5h1M2.3 2.3l.7.7M8 8l.7.7M8.7 2.3l-.7.7M3 8l-.7.7" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/></svg>
+                ) : (
+                  <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M9.3 6.8A4 4 0 014.2 1.7 4.5 4.5 0 105.5 10a4.5 4.5 0 003.8-3.2z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/></svg>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     </>
   );
@@ -408,6 +430,32 @@ const sidebarStyles = `
     transition: color var(--transition-fast);
   }
   .sidebar-disconnect:hover { color: var(--text); }
+  .sidebar-footer-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .theme-toggle {
+    display: flex;
+    gap: 2px;
+    background: var(--accent-soft);
+    border-radius: var(--radius);
+    padding: 2px;
+  }
+  .theme-btn {
+    padding: 3px 5px;
+    border-radius: 3px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    transition: all var(--transition-fast);
+  }
+  .theme-btn:hover { color: var(--text-secondary); }
+  .theme-btn--active {
+    background: var(--bg-card);
+    color: var(--text);
+    box-shadow: var(--shadow-sm);
+  }
 
   /* Mobile */
   .mobile-menu-btn {
